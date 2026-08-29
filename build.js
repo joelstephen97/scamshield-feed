@@ -1,209 +1,423 @@
 #!/usr/bin/env node
 /**
- * ScamShield threat-feed builder.
+ * parry-feed pipeline v2 (Task B1).
  *
- * Pulls live phishing/malware-distribution URLs from OpenPhish (community
- * feed) and URLhaus (abuse.ch), reduces them to registrable-domain block
- * rules, drops anything in the Tranco top-10k (false-positive guard for
- * compromised-but-legitimate big sites), dedupes, caps, and emits
- * blocklist.json in the format ScamShield's OTA updater consumes:
- *
- *   { "version": <days-since-epoch>, "rules": ["||evil.example^", ...] }
- *
- * Only public, redistribution-friendly sources are used. Nothing about any
- * user ever touches this pipeline — it is a build-time artifact.
+ * Aggregates ~11 license-vetted phishing/scam-domain feeds (see sources.js),
+ * normalizes to full hostnames (no eTLD+1 collapsing — shared hosting must
+ * keep the exact abusive hostname), gates against an allowlist, scores each
+ * domain into block/warn tiers by source corroboration, and emits the v0.9
+ * output contract: meta.json, set40.bin, warn40.bin, delta-<prev>.bin,
+ * exact-NN.jsonl.gz shards, risk.json, and the legacy root blocklist.json.
  *
  * Usage:
- *   node build.js                     # writes ./blocklist.json (cap 5000)
- *   node build.js --snapshot out.json # writes a static DNR ruleset (cap 500)
- *                                     # for bundling inside the extension
+ *   node build.js                       # real build: fetches live sources,
+ *                                        # writes v/current/* + blocklist.json
+ *   node build.js --dry-run             # fetches live sources, builds to a
+ *                                        # temp dir, prints stats, touches
+ *                                        # nothing under version control
+ *   node build.js --offline <fixturesDir>  # builds from local fixture files
+ *                                        # (used by test/*.js)
+ *
+ * Node >=20, zero npm dependencies (uses only node: builtins + global fetch).
  */
 'use strict';
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const zlib = require('node:zlib');
+const crypto = require('node:crypto');
 
-const OPENPHISH_URL = 'https://openphish.com/feed.txt';
-const URLHAUS_URL = 'https://urlhaus.abuse.ch/downloads/csv_online/';
-const TRANCO_URL = 'https://tranco-list.eu/top-1m.csv.zip';
-const FEED_CAP = 5000;
-const SNAPSHOT_CAP = 500;
+const { sources, riskTableSources, handBrandList } = require('./sources');
+const { normalizeHost } = require('./lib/normalize');
+const {
+  parseList, parseHosts, parseAdblock, parseJsonArray,
+  parseMetamaskConfig, parsePolkadotAllDeny,
+} = require('./lib/parsers');
+const { fetchTrancoTop, parseTrancoCsv, DEFAULT_TOP_N } = require('./lib/tranco');
+const { buildAllowlist, isAllowed } = require('./lib/gate');
+const { scoreDomains } = require('./lib/score');
+const { buildLegacyBlocklist } = require('./lib/legacy');
+const {
+  recordFor, shardIndexFor, sortRecords, dedupeSortedRecords,
+  concatRecords, bufferToRecords,
+} = require('./lib/hash');
+const { diffSortedRecords, applyDelta, serializeDelta, deserializeDelta } = require('./lib/delta');
+const { buildRiskTable } = require('./lib/riskTables');
 
-// Two-label public suffixes — mirror of the extension's MULTI_LABEL_SUFFIXES.
-const MULTI_LABEL_SUFFIXES = new Set([
-  'co.uk', 'org.uk', 'me.uk', 'net.uk', 'ltd.uk', 'plc.uk', 'ac.uk', 'gov.uk', 'sch.uk', 'nhs.uk',
-  'co.jp', 'ne.jp', 'or.jp', 'ac.jp', 'go.jp',
-  'com.sg', 'edu.sg', 'gov.sg', 'net.sg', 'org.sg',
-  'com.au', 'net.au', 'org.au', 'edu.au', 'gov.au', 'id.au',
-  'com.my', 'net.my', 'org.my', 'edu.my', 'gov.my',
-  'co.in', 'net.in', 'org.in', 'ac.in', 'edu.in', 'gov.in', 'res.in',
-  'com.br', 'net.br', 'org.br', 'gov.br', 'edu.br',
-  'com.mx', 'org.mx', 'gob.mx', 'edu.mx',
-  'co.nz', 'net.nz', 'org.nz', 'govt.nz', 'ac.nz',
-  'com.tr', 'net.tr', 'org.tr', 'gov.tr', 'edu.tr',
-  'com.hk', 'net.hk', 'org.hk', 'edu.hk', 'gov.hk',
-  'co.kr', 'ne.kr', 'or.kr', 'go.kr', 'ac.kr',
-  'com.tw', 'net.tw', 'org.tw', 'edu.tw', 'gov.tw',
-  'co.za', 'net.za', 'org.za', 'gov.za', 'ac.za',
-  'com.ar', 'net.ar', 'org.ar', 'gob.ar', 'edu.ar',
-  'com.sa', 'net.sa', 'org.sa', 'gov.sa', 'edu.sa',
-  'com.eg', 'net.eg', 'org.eg', 'gov.eg', 'edu.eg',
-  'co.th', 'in.th', 'or.th', 'ac.th', 'go.th',
-  'com.ph', 'net.ph', 'org.ph', 'gov.ph', 'edu.ph',
-  'com.vn', 'net.vn', 'org.vn', 'gov.vn', 'edu.vn',
-  'co.id', 'com.cn', 'net.cn', 'org.cn', 'gov.cn', 'edu.cn',
-  'com.pk', 'com.bd', 'com.ng', 'co.ke',
-  'co.il', 'org.il', 'ac.il', 'gov.il',
-  'com.ua', 'com.co', 'com.pe', 'com.cl', 'com.ec', 'com.uy',
-  'com.ve', 'co.ve', 'com.do', 'com.gt', 'co.cr', 'com.pa', 'com.py', 'com.bo',
-  'com.kw', 'com.qa', 'com.bh', 'com.om', 'com.jo', 'com.lb',
-  'com.lk', 'com.np', 'com.kh', 'com.mm'
-]);
-const IP4_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
+const SHRINK_GUARD_RATIO = 0.30; // reject a source whose count drops >30%
+const LEGACY_CAP = 5000;
 
-// Shared/free hosting where one bad tenant must not block the whole platform.
-// Rules for these registrable domains keep the full hostname instead.
-const SHARED_HOSTS = new Set([
-  'pages.dev', 'workers.dev', 'web.app', 'firebaseapp.com', 'netlify.app',
-  'vercel.app', 'github.io', 'gitlab.io', 'blogspot.com', 'wordpress.com',
-  'weebly.com', 'wixsite.com', 'glitch.me', 'repl.co', 'onrender.com',
-  'herokuapp.com', 'surge.sh', 'neocities.org', 'webflow.io', 'square.site',
-  'godaddysites.com', 'hstn.me', 'rf.gd', '000webhostapp.com', 'duckdns.org',
-  'ngrok-free.app', 'trycloudflare.com', 'r2.dev', 'amplifyapp.com',
-  'azurewebsites.net', 'cloudfront.net', 'amazonaws.com', 'windows.net',
-  'googleusercontent.com', 'appspot.com', 'cprapid.com'
-]);
-
-// Gateways where abusive content lives in the PATH, not the hostname
-// (ipfs.io/ipfs/<cid>). Hostname-level blocking would kill the whole legit
-// gateway and URL-level rules go stale in hours — skip these entirely.
-const PATH_SHARED = new Set([
-  'ipfs.io', 'cf-ipfs.com', 'cloudflare-ipfs.com', 'dweb.link', 'w3s.link',
-  'nftstorage.link', 'pinata.cloud', '4everland.io', 'fleek.co',
-  'archive.org', 'drive.google.com', 'docs.google.com', 'dropbox.com'
-]);
-
-// Generic second-level labels: if an unlisted ccTLD uses one of these as its
-// second level (roblox.com.bn), fall back to a three-label registrable rather
-// than emitting a rule for the whole "com.bn" suffix.
-const GENERIC_SECOND_LEVELS = new Set([
-  'com', 'net', 'org', 'edu', 'gov', 'mil', 'co', 'ac', 'go', 'ne', 'or',
-  'gob', 'govt', 'sch', 'id', 'me', 'ltd', 'plc', 'nhs', 'res', 'in', 'web'
-]);
-
-function registrableDomain(host) {
-  const h = String(host || '').toLowerCase().replace(/\.+$/, '');
-  const labels = h.split('.').filter(Boolean);
-  if (IP4_RE.test(h) || labels.length <= 1) return h;
-  const lastTwo = labels.slice(-2).join('.');
-  if (labels.length >= 3 && (
-    MULTI_LABEL_SUFFIXES.has(lastTwo) ||
-    // Unlisted ccTLD with a generic second level ("com.bn"): assume suffix.
-    (labels[labels.length - 1].length === 2 && GENERIC_SECOND_LEVELS.has(labels[labels.length - 2]))
-  )) return labels.slice(-3).join('.');
-  return lastTwo;
-}
-
-function hostOf(url) {
-  try { return new URL(url.trim()).hostname.toLowerCase(); } catch (_) { return null; }
-}
-
-async function fetchText(url) {
-  const res = await fetch(url, { headers: { 'user-agent': 'scamshield-feed-builder' } });
-  if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`);
-  return res.text();
-}
-
-async function fetchTrancoTop(n) {
-  const res = await fetch(TRANCO_URL, { redirect: 'follow' });
-  if (!res.ok) throw new Error(`tranco -> HTTP ${res.status}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  // The zip contains a single top-1m.csv (rank,domain). Minimal zip parse:
-  // find the deflated entry via the local file header and inflate it.
-  const nameLen = buf.readUInt16LE(26);
-  const extraLen = buf.readUInt16LE(28);
-  const method = buf.readUInt16LE(8);
-  const dataStart = 30 + nameLen + extraLen;
-  const raw = buf.subarray(dataStart);
-  const csv = method === 0 ? raw.toString('utf8') : zlib.inflateRawSync(raw).toString('utf8');
-  const top = new Set();
-  for (const line of csv.split('\n')) {
-    const [, domain] = line.trim().split(',');
-    if (domain) top.add(domain.toLowerCase());
-    if (top.size >= n) break;
+// ---------------------------------------------------------------------------
+// Parsing dispatch
+// ---------------------------------------------------------------------------
+function parseByFormat(format, text) {
+  switch (format) {
+    case 'list': return { entries: parseList(text) };
+    case 'hosts': return { entries: parseHosts(text) };
+    case 'adblock': return { entries: parseAdblock(text) };
+    case 'json-array': return { entries: parseJsonArray(text) };
+    case 'metamask-config': {
+      const cfg = parseMetamaskConfig(text);
+      return { entries: cfg.blacklist, whitelist: cfg.whitelist };
+    }
+    case 'polkadot-all-deny': {
+      const d = parsePolkadotAllDeny(text);
+      return { entries: d.deny };
+    }
+    default:
+      throw new Error(`unknown source format: ${format}`);
   }
-  return top;
 }
 
-function parseUrlhausCsv(csv) {
-  // columns: id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
-  const urls = [];
-  for (const line of csv.split('\n')) {
-    if (!line || line.startsWith('#')) continue;
-    const m = line.match(/^"?\d+"?,"?[^",]+"?,"([^"]+)"/);
-    if (m) urls.push(m[1]);
+// ---------------------------------------------------------------------------
+// Per-source disk cache (last-good reuse + poisoning-guard baseline)
+// ---------------------------------------------------------------------------
+function cachePaths(cacheDir, key) {
+  return {
+    meta: path.join(cacheDir, `${key}.json`),
+    data: path.join(cacheDir, `${key}.txt.gz`),
+  };
+}
+
+function loadSourceCache(cacheDir, key) {
+  const { meta, data } = cachePaths(cacheDir, key);
+  if (!fs.existsSync(meta) || !fs.existsSync(data)) return null;
+  try {
+    const metaJson = JSON.parse(fs.readFileSync(meta, 'utf8'));
+    const text = zlib.gunzipSync(fs.readFileSync(data)).toString('utf8');
+    const domains = new Set(text.split('\n').filter(Boolean));
+    return { count: metaJson.count, domains };
+  } catch (_) {
+    return null;
   }
-  return urls;
+}
+
+function saveSourceCache(cacheDir, key, domainSet) {
+  fs.mkdirSync(cacheDir, { recursive: true });
+  const { meta, data } = cachePaths(cacheDir, key);
+  const body = Array.from(domainSet).sort().join('\n');
+  fs.writeFileSync(data, zlib.gzipSync(Buffer.from(body, 'utf8')));
+  fs.writeFileSync(meta, JSON.stringify({ count: domainSet.size, savedAt: new Date().toISOString() }, null, 1) + '\n');
+}
+
+// ---------------------------------------------------------------------------
+// FETCH + NORMALIZE (+ shrink-poisoning guard + last-good reuse) per source
+// ---------------------------------------------------------------------------
+async function fetchAndNormalizeSource(source, { offlineDir, cacheDir }) {
+  let rawText = null;
+  let entries = [];
+  let whitelist = [];
+  let errorMessage = null;
+
+  try {
+    if (offlineDir) {
+      rawText = fs.readFileSync(path.join(offlineDir, source.offlineFile), 'utf8');
+    } else {
+      const res = await fetch(source.url, { headers: { 'user-agent': 'parry-feed-builder' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      rawText = await res.text();
+    }
+    const parsed = parseByFormat(source.format, rawText);
+    entries = parsed.entries;
+    whitelist = parsed.whitelist || [];
+  } catch (e) {
+    errorMessage = e.message;
+    rawText = null;
+  }
+
+  let normalizedSet = null;
+  if (rawText != null) {
+    normalizedSet = new Set();
+    for (const raw of entries) {
+      const h = normalizeHost(raw);
+      if (h) normalizedSet.add(h);
+    }
+  }
+
+  const cache = loadSourceCache(cacheDir, source.key);
+
+  let shrinkRejected = false;
+  if (normalizedSet && cache && cache.count > 0) {
+    const shrinkRatio = 1 - normalizedSet.size / cache.count;
+    if (shrinkRatio > SHRINK_GUARD_RATIO) shrinkRejected = true;
+  }
+
+  let finalSet;
+  let status;
+  if (!normalizedSet) {
+    if (cache) {
+      finalSet = cache.domains;
+      status = `fetch/parse failed (${errorMessage}) -> reused last-good cache (${cache.count})`;
+    } else {
+      finalSet = new Set();
+      status = `fetch/parse failed (${errorMessage}), no cache available -> 0 domains`;
+    }
+  } else if (shrinkRejected) {
+    finalSet = cache.domains;
+    status = `REJECTED: shrank ${cache.count} -> ${normalizedSet.size} (>30%), poisoning guard -> reused last-good cache`;
+  } else {
+    finalSet = normalizedSet;
+    status = cache ? 'ok' : 'ok (first successful fetch, cache seeded)';
+    saveSourceCache(cacheDir, source.key, finalSet);
+  }
+
+  return {
+    key: source.key,
+    name: source.name,
+    rawCount: entries.length,
+    normalizedCount: normalizedSet ? normalizedSet.size : 0,
+    finalSet,
+    status,
+    whitelist,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// EMIT helpers
+// ---------------------------------------------------------------------------
+function recordsForTier(scored, tier) {
+  const recs = [];
+  for (const [host, entry] of scored) {
+    if (entry.tier === tier) recs.push(recordFor(host));
+  }
+  return dedupeSortedRecords(sortRecords(recs));
+}
+
+function removeCollisions(warnRecords, blockRecords) {
+  const blockKeys = new Set(blockRecords.map((b) => b.toString('hex')));
+  return warnRecords.filter((r) => !blockKeys.has(r.toString('hex')));
+}
+
+function buildExactShards(scored, sourceMetaByKey) {
+  const shards = new Map(); // shardIndex(hex2) -> array of {d,s}
+  for (const [host, entry] of scored) {
+    const idx = shardIndexFor(host);
+    if (!shards.has(idx)) shards.set(idx, []);
+    const sourceNames = Array.from(entry.sources)
+      .map((key) => (sourceMetaByKey.get(key) || {}).name || key)
+      .sort();
+    shards.get(idx).push({ d: host, s: sourceNames });
+  }
+  for (const arr of shards.values()) arr.sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
+  return shards;
+}
+
+function formatVersion(date) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  const h = String(date.getUTCHours()).padStart(2, '0');
+  return `${y}${m}${d}${h}`;
+}
+
+function readPrevState(prevOutDir) {
+  const metaPath = path.join(prevOutDir, 'meta.json');
+  const setPath = path.join(prevOutDir, 'set40.bin');
+  if (!fs.existsSync(metaPath) || !fs.existsSync(setPath)) {
+    return { prevVersion: null, prevBlockRecords: [] };
+  }
+  try {
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    const prevBlockRecords = bufferToRecords(fs.readFileSync(setPath));
+    return { prevVersion: meta.version || null, prevBlockRecords };
+  } catch (_) {
+    return { prevVersion: null, prevBlockRecords: [] };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main pipeline (testable — no CLI side effects)
+// ---------------------------------------------------------------------------
+async function runBuild(opts = {}) {
+  const repoRoot = opts.repoRoot || __dirname;
+  const offlineDir = opts.offlineDir || null;
+  const cacheDir = opts.cacheDir || path.join(repoRoot, 'cache');
+  const prevDir = opts.prevDir || repoRoot;
+  const writeDir = opts.writeDir || repoRoot;
+  const now = opts.now || new Date();
+  const trancoTopN = opts.trancoTopN || DEFAULT_TOP_N;
+
+  const stats = { sources: [], riskSources: [], gateRemovals: 0, tierSplit: {}, unionSize: 0 };
+
+  // --- Tranco (allowlist gate input) ---
+  let tranco;
+  if (offlineDir) {
+    const csv = fs.readFileSync(path.join(offlineDir, 'tranco.csv'), 'utf8');
+    tranco = parseTrancoCsv(csv, trancoTopN);
+  } else {
+    tranco = await fetchTrancoTop(trancoTopN);
+  }
+
+  // --- FETCH + NORMALIZE each enabled blocklist source ---
+  const enabledSources = sources.filter((s) => s.enabled !== false);
+  const perSourceSets = new Map();
+  const sourceMetaByKey = new Map();
+  let metamaskWhitelist = [];
+  for (const source of enabledSources) {
+    const result = await fetchAndNormalizeSource(source, { offlineDir, cacheDir });
+    perSourceSets.set(source.key, result.finalSet);
+    sourceMetaByKey.set(source.key, source);
+    if (source.contributesAllowlist) metamaskWhitelist = result.whitelist;
+    stats.sources.push({
+      key: source.key, name: source.name, licenseTier: source.licenseTier,
+      scoreWeight: source.scoreWeight, rawCount: result.rawCount,
+      normalizedCount: result.normalizedCount, keptCount: result.finalSet.size,
+      status: result.status,
+    });
+  }
+
+  // --- ALLOWLIST GATE ---
+  const allowlist = buildAllowlist({ tranco, metamaskWhitelist, handBrandList });
+  const gatedPerSourceSets = new Map();
+  let gateRemovals = 0;
+  for (const [key, domainSet] of perSourceSets) {
+    const kept = new Set();
+    for (const host of domainSet) {
+      if (isAllowed(host, allowlist)) gateRemovals++;
+      else kept.add(host);
+    }
+    gatedPerSourceSets.set(key, kept);
+  }
+  stats.gateRemovals = gateRemovals;
+  stats.trancoSize = tranco.size;
+  stats.allowlistSize = allowlist.size;
+
+  // --- SCORE ---
+  const scored = scoreDomains(gatedPerSourceSets, sourceMetaByKey);
+  let blockCount = 0;
+  let warnCount = 0;
+  for (const entry of scored.values()) {
+    if (entry.tier === 'block') blockCount++;
+    else warnCount++;
+  }
+  stats.tierSplit = { block: blockCount, warn: warnCount, total: scored.size };
+  stats.unionSize = scored.size;
+
+  // --- RISK TABLES (HaGeZi dyndns/hoster; NOT part of the blocklist union) ---
+  const enabledRiskSources = riskTableSources.filter((s) => s.enabled !== false);
+  let dyndnsHosts = [];
+  let hosterHosts = [];
+  for (const rt of enabledRiskSources) {
+    const result = await fetchAndNormalizeSource(rt, { offlineDir, cacheDir });
+    if (rt.riskKey === 'dyndns') dyndnsHosts = Array.from(result.finalSet);
+    else if (rt.riskKey === 'hosters') hosterHosts = Array.from(result.finalSet);
+    stats.riskSources.push({
+      key: rt.key, name: rt.name, rawCount: result.rawCount,
+      normalizedCount: result.normalizedCount, keptCount: result.finalSet.size,
+      status: result.status,
+    });
+  }
+  const risk = buildRiskTable(dyndnsHosts, hosterHosts);
+
+  // --- EMIT ---
+  const blockRecords = recordsForTier(scored, 'block');
+  let warnRecords = recordsForTier(scored, 'warn');
+  warnRecords = removeCollisions(warnRecords, blockRecords);
+
+  const prevOutDir = path.join(prevDir, 'v', 'current');
+  const { prevVersion, prevBlockRecords } = readPrevState(prevOutDir);
+  const delta = diffSortedRecords(prevBlockRecords, blockRecords);
+  const deltaBuf = serializeDelta(delta);
+
+  const version = formatVersion(now);
+  const set40Buf = concatRecords(blockRecords);
+  const warn40Buf = concatRecords(warnRecords);
+  const sha256Set40 = crypto.createHash('sha256').update(set40Buf).digest('hex');
+  const sha256Delta = prevVersion ? crypto.createHash('sha256').update(deltaBuf).digest('hex') : null;
+
+  const meta = {
+    version,
+    generatedAt: now.toISOString(),
+    counts: { block: blockRecords.length, warn: warnRecords.length, total: scored.size },
+    sha256: { set40: sha256Set40, deltaFromPrev: sha256Delta },
+    prev: prevVersion,
+    urls: {
+      cdn: `https://cdn.jsdelivr.net/gh/joelstephen97/parry-feed@v${version}/v/current/`,
+      fallback: 'https://raw.githubusercontent.com/joelstephen97/parry-feed/main/v/current/',
+    },
+    ttlHours: 6,
+  };
+
+  const legacy = buildLegacyBlocklist(scored, { cap: LEGACY_CAP, now: now.getTime() });
+  const shards = buildExactShards(scored, sourceMetaByKey);
+
+  const outDir = path.join(writeDir, 'v', 'current');
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(path.join(outDir, 'set40.bin'), set40Buf);
+  fs.writeFileSync(path.join(outDir, 'warn40.bin'), warn40Buf);
+  if (prevVersion) {
+    fs.writeFileSync(path.join(outDir, `delta-${prevVersion}.bin`), deltaBuf);
+  }
+  fs.writeFileSync(path.join(outDir, 'risk.json'), JSON.stringify(risk, null, 1) + '\n');
+  fs.writeFileSync(path.join(outDir, 'meta.json'), JSON.stringify(meta, null, 1) + '\n');
+  for (const [idx, lines] of shards) {
+    const jsonl = lines.map((l) => JSON.stringify(l)).join('\n') + '\n';
+    fs.writeFileSync(path.join(outDir, `exact-${idx}.jsonl.gz`), zlib.gzipSync(Buffer.from(jsonl, 'utf8')));
+  }
+  fs.writeFileSync(path.join(writeDir, 'blocklist.json'), JSON.stringify(legacy, null, 1) + '\n');
+
+  return { stats, scored, risk, meta, legacy, outDir, shardCount: shards.size };
+}
+
+// ---------------------------------------------------------------------------
+// CLI
+// ---------------------------------------------------------------------------
+function printStats(stats) {
+  console.log('\nPer-source counts:');
+  for (const s of stats.sources) {
+    console.log(`  [${s.licenseTier}/${s.scoreWeight}] ${s.name}: raw=${s.rawCount} normalized=${s.normalizedCount} kept=${s.keptCount} (${s.status})`);
+  }
+  console.log('\nRisk-table sources:');
+  for (const s of stats.riskSources) {
+    console.log(`  ${s.name}: raw=${s.rawCount} normalized=${s.normalizedCount} kept=${s.keptCount} (${s.status})`);
+  }
+  console.log(`\nTranco allowlist size: ${stats.trancoSize} (+ MetaMask whitelist + hand brand list = ${stats.allowlistSize} total)`);
+  console.log(`Allowlist gate removals: ${stats.gateRemovals}`);
+  console.log(`Union size (post-gate, pre-dedupe-by-hash): ${stats.unionSize}`);
+  console.log(`Tier split: block=${stats.tierSplit.block} warn=${stats.tierSplit.warn} total=${stats.tierSplit.total}`);
 }
 
 async function main() {
-  const snapshotIdx = process.argv.indexOf('--snapshot');
-  const snapshotOut = snapshotIdx > -1 ? process.argv[snapshotIdx + 1] : null;
+  const args = process.argv.slice(2);
+  const dryRun = args.includes('--dry-run');
+  const offlineIdx = args.indexOf('--offline');
+  const offlineDir = offlineIdx > -1 ? args[offlineIdx + 1] : null;
 
-  console.log('Downloading sources…');
-  const [openphish, urlhausCsv, tranco] = await Promise.all([
-    fetchText(OPENPHISH_URL),
-    fetchText(URLHAUS_URL),
-    fetchTrancoTop(10000)
-  ]);
-
-  const sources = [
-    // OpenPhish first: live phishing beats older malware URLs when capping.
-    ...openphish.split('\n'),
-    ...parseUrlhausCsv(urlhausCsv)
-  ];
-
-  const rules = [];
-  const seen = new Set();
-  let droppedTranco = 0;
-  for (const raw of sources) {
-    const host = hostOf(raw);
-    if (!host || host === 'localhost') continue;
-    const reg = registrableDomain(host);
-    if (PATH_SHARED.has(reg) || PATH_SHARED.has(host)) continue; // path-scoped gateways: unblockable by host
-    if (tranco.has(reg)) { droppedTranco++; continue; } // FP guard: never block top sites
-    // On shared hosting block only the exact hostname; otherwise the domain.
-    const target = SHARED_HOSTS.has(reg) ? host : reg;
-    if (tranco.has(target)) { droppedTranco++; continue; }
-    if (seen.has(target)) continue;
-    seen.add(target);
-    rules.push('||' + target + '^');
-    if (rules.length >= FEED_CAP) break;
+  const opts = { repoRoot: __dirname };
+  if (offlineDir) opts.offlineDir = path.resolve(offlineDir);
+  if (dryRun) {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'parry-feed-dryrun-'));
+    opts.writeDir = tmp;
+    opts.prevDir = __dirname; // compare against real committed state, if any
+    console.log(`[dry-run] writing to temp dir: ${tmp} (repo outputs untouched)`);
   }
 
-  const version = Math.floor(Date.now() / 86400000); // days since epoch: bumps daily
-  console.log(`Kept ${rules.length} rules (dropped ${droppedTranco} Tranco-top-10k hits).`);
-
-  if (snapshotOut) {
-    // Static DNR ruleset bundled inside the extension. Rule id 1 stays the
-    // manual smoke-test domain; real rules follow.
-    const dnr = [{
-      id: 1, priority: 1, action: { type: 'block' },
-      condition: { urlFilter: '||scamshield-test-blocked.example^', resourceTypes: ['main_frame', 'sub_frame'] }
-    }];
-    rules.slice(0, SNAPSHOT_CAP).forEach((r, i) => dnr.push({
-      id: i + 2, priority: 1, action: { type: 'block' },
-      condition: { urlFilter: r, resourceTypes: ['main_frame', 'sub_frame'] }
-    }));
-    fs.writeFileSync(snapshotOut, JSON.stringify(dnr, null, 2) + '\n');
-    console.log(`Wrote static snapshot (${dnr.length} rules) to ${snapshotOut}`);
-    return;
+  const result = await runBuild(opts);
+  printStats(result.stats);
+  if (dryRun) {
+    console.log(`\n[dry-run] complete. Outputs left at ${result.outDir} for inspection; nothing committed.`);
+  } else {
+    console.log(`\nWrote outputs to ${result.outDir} and ${path.join(opts.writeDir || __dirname, 'blocklist.json')}`);
+    console.log(`Version: ${result.meta.version} (prev: ${result.meta.prev || 'none'})`);
   }
-
-  const out = { version, generated: new Date().toISOString(), rules };
-  const dest = path.join(__dirname, 'blocklist.json');
-  fs.writeFileSync(dest, JSON.stringify(out, null, 1) + '\n');
-  console.log(`Wrote ${dest} (version ${version}, ${rules.length} rules).`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  runBuild,
+  parseByFormat,
+  fetchAndNormalizeSource,
+  loadSourceCache,
+  saveSourceCache,
+  recordsForTier,
+  removeCollisions,
+  buildExactShards,
+  formatVersion,
+  readPrevState,
+};

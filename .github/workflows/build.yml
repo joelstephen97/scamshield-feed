@@ -2,7 +2,7 @@ name: build-feed
 
 on:
   schedule:
-    - cron: '0 3 * * *' # daily 03:00 UTC
+    - cron: '0 */6 * * *' # every 6 hours
   workflow_dispatch:
 
 permissions:
@@ -13,14 +13,48 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need tag history to create/move v<version> tags
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: node build.js
-      - name: Commit if changed
+
+      # Per-source fetch failures are handled INSIDE build.js (continue-on-error
+      # + reuse the last-good cache, gated by a >30% shrink poisoning guard —
+      # see fetchAndNormalizeSource() in build.js). The cache/ directory is
+      # committed to the repo, so `actions/checkout` above already restores
+      # the last-good state for every source before this step runs; no
+      # separate actions/cache step is needed. A single source failing never
+      # fails this job.
+      - name: Run build.js
+        run: node build.js
+
+      - name: Commit outputs if changed
+        id: commit
         run: |
           git config user.name "Joel Stephen"
           git config user.email "joelstephen97@users.noreply.github.com"
-          git add blocklist.json
-          git diff --cached --quiet || git commit -m "feed: daily update"
-          git push
+          git add v/current blocklist.json cache
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            VERSION=$(node -e "console.log(require('./v/current/meta.json').version)")
+            git commit -m "feed: build $VERSION"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      # meta.json's urls.cdn points jsDelivr at the tag `v<version>` for
+      # immutable caching — create/move that tag to the commit we just made
+      # so the URL actually resolves. jsDelivr's GitHub CDN caches tagged
+      # refs aggressively (which is the point: full-file traffic must not
+      # hit GitHub's raw/Pages bandwidth caps), so untagged commits would
+      # never get picked up.
+      - name: Tag this version
+        if: steps.commit.outputs.changed == 'true'
+        run: |
+          TAG="v${{ steps.commit.outputs.version }}"
+          git tag -fa "$TAG" -m "parry-feed $TAG"
+          git push origin "$TAG" --force

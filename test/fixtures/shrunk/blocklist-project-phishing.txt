@@ -1,0 +1,3 @@
+# Title: Phishing Block List (fixture)
+0.0.0.0 b1-tier2weight.com
+0.0.0.0 shared-warn-promote.com

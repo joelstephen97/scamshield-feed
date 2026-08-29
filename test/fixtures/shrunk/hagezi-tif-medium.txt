@@ -1,0 +1,2 @@
+# fixture
+shared-warn-promote.com
