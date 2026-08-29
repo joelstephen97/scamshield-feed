@@ -13,8 +13,8 @@
   },
   "prev": null,
   "urls": {
-    "cdn": "https://cdn.jsdelivr.net/gh/joelstephen97/parry-feed@v2026082913/v/current/",
-    "fallback": "https://raw.githubusercontent.com/joelstephen97/parry-feed/main/v/current/"
+    "cdn": "https://cdn.jsdelivr.net/gh/joelstephen97/scamshield-feed@v2026082913/v/current/",
+    "fallback": "https://raw.githubusercontent.com/joelstephen97/scamshield-feed/main/v/current/"
   },
   "ttlHours": 6
 }

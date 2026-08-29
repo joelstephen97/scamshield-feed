@@ -1,6 +1,6 @@
 # parry-feed
 
-Threat-feed pipeline for [Parry](https://github.com/joelstephen97/scamshield)
+Threat-feed pipeline for [ScamShield](https://github.com/joelstephen97/scamshield)
 (formerly ScamShield). Aggregates ~1M+ phishing/scam domains from a dozen
 license-vetted public feeds, scores them by source corroboration, and
 publishes hash-based block/warn sets that the extension consumes over
@@ -86,7 +86,7 @@ Published under `v/current/` (overwritten in place each run — see
 `version` is a UTC `yyyymmddHH` string. Outputs are overwritten in place
 under `v/current/` on every run (no per-version directory pile-up in git);
 immutability for jsDelivr comes from tagging the commit `v<version>` after
-each publish, so `https://cdn.jsdelivr.net/gh/joelstephen97/parry-feed@v<version>/v/current/...`
+each publish, so `https://cdn.jsdelivr.net/gh/joelstephen97/scamshield-feed@v<version>/v/current/...`
 always resolves to that exact snapshot even though the branch tip moves on.
 `meta.json`'s `urls.fallback` points at the mutable `main` branch path for
 when jsDelivr is unreachable.
@@ -107,7 +107,7 @@ compilation of many individually-licensed sources — see `ATTRIBUTION.md` for
 the full per-source breakdown, including the CC BY-SA 4.0 attribution note
 for malware-filter's laundered OpenPhish/PhishTank/IPThreat channel.
 
-**The Parry extension itself stays MIT.** It only *downloads* this repo's
+**The ScamShield extension itself stays MIT.** It only *downloads* this repo's
 published data output at runtime (over jsDelivr/raw.githubusercontent) — it
 never links against, imports, or bundles any GPL code from this repo. Under
 GPL-3.0, distributing a program that merely fetches data produced by GPL
@@ -124,7 +124,7 @@ separate for exactly this reason.
   were used in v1 but their terms forbid redistribution (OpenPhish: no
   redistribution/no commercial use; URLhaus: auth-key-gated, non-commercial,
   no-derivatives). Continuing to republish their data would have put every
-  downstream Parry install in breach of those terms.
+  downstream ScamShield install in breach of those terms.
 - Replaced the two-source v1 pipeline with a 12-source registry
   (`sources.js`) split into tier-1 "green" (freely redistributable) and
   tier-2 "amber" (GPL-isolated) by license, and into scoreWeight A/B by

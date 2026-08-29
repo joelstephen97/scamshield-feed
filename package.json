@@ -2,7 +2,7 @@
   "name": "parry-feed",
   "version": "2.0.0",
   "private": true,
-  "description": "Threat-feed pipeline for the Parry (formerly ScamShield) extension.",
+  "description": "Threat-feed pipeline for the ScamShield (formerly ScamShield) extension.",
   "license": "GPL-3.0-only",
   "engines": {
     "node": ">=20"

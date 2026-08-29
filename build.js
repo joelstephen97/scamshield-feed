@@ -333,8 +333,8 @@ async function runBuild(opts = {}) {
     sha256: { set40: sha256Set40, warn40: sha256Warn40, deltaFromPrev: sha256Delta },
     prev: prevVersion,
     urls: {
-      cdn: `https://cdn.jsdelivr.net/gh/joelstephen97/parry-feed@v${version}/v/current/`,
-      fallback: 'https://raw.githubusercontent.com/joelstephen97/parry-feed/main/v/current/',
+      cdn: `https://cdn.jsdelivr.net/gh/joelstephen97/scamshield-feed@v${version}/v/current/`,
+      fallback: 'https://raw.githubusercontent.com/joelstephen97/scamshield-feed/main/v/current/',
     },
     ttlHours: 6,
   };
