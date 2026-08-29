@@ -1,19 +1,20 @@
 {
- "version": "2026082913",
- "generatedAt": "2026-08-29T13:27:05.155Z",
- "counts": {
-  "block": 425536,
-  "warn": 1017399,
-  "total": 1442936
- },
- "sha256": {
-  "set40": "d2f7ed224cc2ada82ae6a9a981e9dd0a3c3fbc6ad73bb654e98f5b15b8c41d9b",
-  "deltaFromPrev": null
- },
- "prev": null,
- "urls": {
-  "cdn": "https://cdn.jsdelivr.net/gh/joelstephen97/parry-feed@v2026082913/v/current/",
-  "fallback": "https://raw.githubusercontent.com/joelstephen97/parry-feed/main/v/current/"
- },
- "ttlHours": 6
+  "version": "2026082913",
+  "generatedAt": "2026-08-29T13:27:05.155Z",
+  "counts": {
+    "block": 425536,
+    "warn": 1017399,
+    "total": 1442936
+  },
+  "sha256": {
+    "set40": "d2f7ed224cc2ada82ae6a9a981e9dd0a3c3fbc6ad73bb654e98f5b15b8c41d9b",
+    "deltaFromPrev": null,
+    "warn40": "c4cc94f94843b243bd65b98a18e185c43e57b39dca0a2fdf272369c9a51a740b"
+  },
+  "prev": null,
+  "urls": {
+    "cdn": "https://cdn.jsdelivr.net/gh/joelstephen97/parry-feed@v2026082913/v/current/",
+    "fallback": "https://raw.githubusercontent.com/joelstephen97/parry-feed/main/v/current/"
+  },
+  "ttlHours": 6
 }

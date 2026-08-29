@@ -323,13 +323,14 @@ async function runBuild(opts = {}) {
   const set40Buf = concatRecords(blockRecords);
   const warn40Buf = concatRecords(warnRecords);
   const sha256Set40 = crypto.createHash('sha256').update(set40Buf).digest('hex');
+  const sha256Warn40 = crypto.createHash('sha256').update(warn40Buf).digest('hex');
   const sha256Delta = prevVersion ? crypto.createHash('sha256').update(deltaBuf).digest('hex') : null;
 
   const meta = {
     version,
     generatedAt: now.toISOString(),
     counts: { block: blockRecords.length, warn: warnRecords.length, total: scored.size },
-    sha256: { set40: sha256Set40, deltaFromPrev: sha256Delta },
+    sha256: { set40: sha256Set40, warn40: sha256Warn40, deltaFromPrev: sha256Delta },
     prev: prevVersion,
     urls: {
       cdn: `https://cdn.jsdelivr.net/gh/joelstephen97/parry-feed@v${version}/v/current/`,
