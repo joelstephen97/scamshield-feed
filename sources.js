@@ -238,6 +238,53 @@ const riskTableSources = [
 ];
 
 /**
+ * HaGeZi Newly-Registered-Domains (NRD) sources (Task C3): NOT part of the
+ * block/warn union, NOT a risk.json table — millions of domains, so they
+ * feed ONLY the nrd.bloom Bloom filter (see lib/bloom.js) via a dedicated
+ * build.js stage. Reuses fetchAndNormalizeSource()'s generic fetch/cache/
+ * poisoning-guard/continue-on-error machinery exactly like the other source
+ * arrays, since that function only ever needs { key, url, format,
+ * offlineFile } from its argument.
+ *
+ * Window choice: github.com/hagezi/nrd ships domains/nrd7.txt (last 7 days),
+ * domains/nrd14-8.txt (8-14 days ago), domains/nrd21-15.txt, nrd28-22.txt,
+ * nrd35-29.txt (each a disjoint day-window "part"), plus adblock/-format
+ * mirrors of the same data. There is no single fetchable 30-day "every NRD"
+ * artifact — the repo's README explicitly says to combine parts yourself
+ * ("nrd7 + nrd14-8 = 14 days"). The only true 30-day single-file option
+ * (dga30.txt) is a DIFFERENT, much smaller list: high-entropy
+ * algorithmically-generated domains only, not "every newly registered
+ * domain" — using it instead would silently narrow this signal to DGA scam
+ * kits and miss the far more common case of an ordinary-looking domain
+ * registered days ago. So this pipeline unions nrd7.txt + nrd14-8.txt for a
+ * genuine 14-day newly-registered-domains window, matching the brief's
+ * "~14-day part files" preference.
+ */
+const nrdSources = [
+  {
+    key: 'hagezi-nrd7',
+    name: 'HaGeZi NRD (last 7 days)',
+    license: 'GPL-3.0',
+    homepage: 'https://github.com/hagezi/nrd',
+    url: 'https://raw.githubusercontent.com/hagezi/nrd/main/domains/nrd7.txt',
+    format: 'list',
+    offlineFile: 'hagezi-nrd7.txt',
+    enabled: true,
+  },
+  {
+    key: 'hagezi-nrd14-8',
+    name: 'HaGeZi NRD (8-14 days ago)',
+    license: 'GPL-3.0',
+    homepage: 'https://github.com/hagezi/nrd',
+    url: 'https://raw.githubusercontent.com/hagezi/nrd/main/domains/nrd14-8.txt',
+    format: 'list',
+    offlineFile: 'hagezi-nrd14-8.txt',
+    enabled: true,
+  },
+];
+const NRD_WINDOW_DAYS = 14;
+
+/**
  * Hand brand list: a small set of heavily-impersonated consumer brands
  * (banking/payments/big-tech/exchanges) unioned into the allowlist gate
  * alongside Tranco top-100k and MetaMask's whitelist. Deliberately short —
@@ -254,4 +301,4 @@ const handBrandList = [
   'roblox.com', 'discord.com', 'yahoo.com', 'outlook.com', 'zoom.us',
 ];
 
-module.exports = { sources, riskTableSources, handBrandList };
+module.exports = { sources, riskTableSources, nrdSources, NRD_WINDOW_DAYS, handBrandList };

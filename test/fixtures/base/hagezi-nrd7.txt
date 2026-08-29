@@ -1,0 +1,8 @@
+# Title: Newly Registered Domains (NRD) — test fixture (last 7 days)
+# Source: https://github.com/hagezi/nrd (domains/nrd7.txt), trimmed for tests
+nrd-fresh-one.example
+nrd-fresh-two.example
+nrd-shared-window.example
+nrd-only-in-seven.example
+0-fake-brand-support.icu
+paypa1-verify-account.top

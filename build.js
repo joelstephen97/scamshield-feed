@@ -27,7 +27,7 @@ const path = require('node:path');
 const zlib = require('node:zlib');
 const crypto = require('node:crypto');
 
-const { sources, riskTableSources, handBrandList } = require('./sources');
+const { sources, riskTableSources, nrdSources, NRD_WINDOW_DAYS, handBrandList } = require('./sources');
 const { normalizeHost } = require('./lib/normalize');
 const {
   parseList, parseHosts, parseAdblock, parseJsonArray,
@@ -43,9 +43,11 @@ const {
 } = require('./lib/hash');
 const { diffSortedRecords, applyDelta, serializeDelta, deserializeDelta } = require('./lib/delta');
 const { buildRiskTable } = require('./lib/riskTables');
+const { buildBloom, serializeBloomFile } = require('./lib/bloom');
 
 const SHRINK_GUARD_RATIO = 0.30; // reject a source whose count drops >30%
 const LEGACY_CAP = 5000;
+const NRD_TARGET_P = 0.005; // target ~0.5% false-positive rate for nrd.bloom
 
 // ---------------------------------------------------------------------------
 // Parsing dispatch
@@ -237,7 +239,7 @@ async function runBuild(opts = {}) {
   const now = opts.now || new Date();
   const trancoTopN = opts.trancoTopN || DEFAULT_TOP_N;
 
-  const stats = { sources: [], riskSources: [], gateRemovals: 0, tierSplit: {}, unionSize: 0 };
+  const stats = { sources: [], riskSources: [], nrdSources: [], gateRemovals: 0, tierSplit: {}, unionSize: 0 };
 
   // --- Tranco (allowlist gate input) ---
   let tranco;
@@ -309,6 +311,30 @@ async function runBuild(opts = {}) {
   }
   const risk = buildRiskTable(dyndnsHosts, hosterHosts);
 
+  // --- NRD BLOOM FILTER (Task C3): union of HaGeZi's 7-day + 8-14-day
+  // windows = a 14-day "newly-registered-domains" signal. MILLIONS of
+  // domains, so this never touches the block/warn union or risk.json — it
+  // is emitted as its own compact Bloom filter (see lib/bloom.js for the
+  // file format and the exact index-derivation spec, mirrored byte-for-byte
+  // in the extension's engine/bloom.js). Uses the same
+  // fetchAndNormalizeSource() poisoning-guard/cache/continue-on-error
+  // machinery as every other source array.
+  const enabledNrdSources = nrdSources.filter((s) => s.enabled !== false);
+  const nrdHostSet = new Set();
+  for (const nsrc of enabledNrdSources) {
+    const result = await fetchAndNormalizeSource(nsrc, { offlineDir, cacheDir });
+    for (const h of result.finalSet) nrdHostSet.add(h);
+    stats.nrdSources.push({
+      key: nsrc.key, name: nsrc.name, rawCount: result.rawCount,
+      normalizedCount: result.normalizedCount, keptCount: result.finalSet.size,
+      status: result.status,
+    });
+  }
+  const nrdBuilt = buildBloom(nrdHostSet, { p: NRD_TARGET_P });
+  const nrdBloomBuf = serializeBloomFile(nrdBuilt);
+  const sha256Nrd = crypto.createHash('sha256').update(nrdBloomBuf).digest('hex');
+  stats.nrdBloom = { n: nrdBuilt.n, mBits: nrdBuilt.mBits, k: nrdBuilt.k, bytes: nrdBloomBuf.length };
+
   // --- EMIT ---
   const blockRecords = recordsForTier(scored, 'block');
   let warnRecords = recordsForTier(scored, 'warn');
@@ -337,6 +363,14 @@ async function runBuild(opts = {}) {
       fallback: 'https://raw.githubusercontent.com/joelstephen97/scamshield-feed/main/v/current/',
     },
     ttlHours: 6,
+    nrd: {
+      file: 'nrd.bloom',
+      sha256: sha256Nrd,
+      n: nrdBuilt.n,
+      mBits: nrdBuilt.mBits,
+      k: nrdBuilt.k,
+      windowDays: NRD_WINDOW_DAYS,
+    },
   };
 
   const legacy = buildLegacyBlocklist(scored, { cap: LEGACY_CAP, now: now.getTime() });
@@ -350,6 +384,7 @@ async function runBuild(opts = {}) {
     fs.writeFileSync(path.join(outDir, `delta-${prevVersion}.bin`), deltaBuf);
   }
   fs.writeFileSync(path.join(outDir, 'risk.json'), JSON.stringify(risk, null, 1) + '\n');
+  fs.writeFileSync(path.join(outDir, 'nrd.bloom'), nrdBloomBuf);
   fs.writeFileSync(path.join(outDir, 'meta.json'), JSON.stringify(meta, null, 1) + '\n');
   for (const [idx, lines] of shards) {
     const jsonl = lines.map((l) => JSON.stringify(l)).join('\n') + '\n';
@@ -371,6 +406,13 @@ function printStats(stats) {
   console.log('\nRisk-table sources:');
   for (const s of stats.riskSources) {
     console.log(`  ${s.name}: raw=${s.rawCount} normalized=${s.normalizedCount} kept=${s.keptCount} (${s.status})`);
+  }
+  console.log('\nNRD (newly-registered-domains) sources:');
+  for (const s of stats.nrdSources) {
+    console.log(`  ${s.name}: raw=${s.rawCount} normalized=${s.normalizedCount} kept=${s.keptCount} (${s.status})`);
+  }
+  if (stats.nrdBloom) {
+    console.log(`  nrd.bloom: n=${stats.nrdBloom.n} mBits=${stats.nrdBloom.mBits} k=${stats.nrdBloom.k} bytes=${stats.nrdBloom.bytes}`);
   }
   console.log(`\nTranco allowlist size: ${stats.trancoSize} (+ MetaMask whitelist + hand brand list = ${stats.allowlistSize} total)`);
   console.log(`Allowlist gate removals: ${stats.gateRemovals}`);

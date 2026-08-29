@@ -1,0 +1,2 @@
+# Title: Newly Registered Domains (NRD) — shrunk test fixture (poisoning guard)
+nrd-fresh-one.example

@@ -20,8 +20,15 @@ FETCH (per source, continue-on-error, reuse last-good on failure,
   -> SCORE (tier "block" = >=2 independent sources OR any tier-1 source;
             tier "warn" = a single tier-2/noisy source)
   -> EMIT (meta.json, set40.bin, warn40.bin, delta-<prev>.bin,
-           exact-NN.jsonl.gz shards, risk.json, legacy blocklist.json)
+           exact-NN.jsonl.gz shards, risk.json, nrd.bloom, legacy blocklist.json)
 ```
+
+`nrd.bloom` (Task C3, "New site" signal) is a separate stage: HaGeZi's
+newly-registered-domains lists run into the millions, so they never touch
+the block/warn union or risk.json — they are folded into their own compact
+Bloom filter instead. See `lib/bloom.js` for the file format and the exact
+hash-index derivation, mirrored byte-for-byte in the extension's
+`engine/bloom.js`.
 
 Run it:
 
@@ -79,6 +86,7 @@ Published under `v/current/` (overwritten in place each run — see
 | `delta-<prevVersion>.bin` | `{addedCount u32, removedCount u32}` header + sorted added/removed records (block tier only) |
 | `exact-<NN>.jsonl.gz` | 256 shards (NN = first hash byte, hex) of `{"d":"domain","s":["source",...]}` for warning-page provenance |
 | `risk.json` | `{ tlds, dyndns: [hashed u32...], hosters: [...] }` evidence tables |
+| `nrd.bloom` | Bloom filter (16-byte header + bit array) over HaGeZi's 14-day newly-registered-domains window; `meta.json`'s `nrd` block carries its sha256/n/mBits/k |
 | `/blocklist.json` (repo root) | **legacy, unchanged since v1**: `{ version, rules: ["||domain^"] }`, cap 5000 — pre-0.9 installs poll this forever |
 
 ### Versioning

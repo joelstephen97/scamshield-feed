@@ -1,0 +1,6 @@
+# Title: Newly Registered Domains (NRD) — test fixture (8-14 days ago)
+# Source: https://github.com/hagezi/nrd (domains/nrd14-8.txt), trimmed for tests
+nrd-fresh-three.example
+nrd-shared-window.example
+nrd-only-in-fourteen.example
+secure-login-verify-8271.xyz
