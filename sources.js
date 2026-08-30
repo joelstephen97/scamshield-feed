@@ -285,10 +285,14 @@ const nrdSources = [
 const NRD_WINDOW_DAYS = 14;
 
 /**
- * Hand brand list: a small set of heavily-impersonated consumer brands
+ * Hand brand list: a set of heavily-impersonated consumer brands
  * (banking/payments/big-tech/exchanges) unioned into the allowlist gate
- * alongside Tranco top-100k and MetaMask's whitelist. Deliberately short —
- * this is a hand-curated FP guard, not an attempt at a full allowlist.
+ * alongside Tranco top-100k and MetaMask's whitelist. A hand-curated FP
+ * guard — the primary registrable domains of brands the extension already
+ * protects (engine/constants.js BRAND_DOMAINS), so a poisoned feed entry can
+ * never make the build block a real bank/gov/marketplace login domain. The
+ * regional (UAE / SE-Asia / India) block mirrors the extension's regional
+ * brand coverage, since those are prime local phishing targets.
  */
 const handBrandList = [
   'google.com', 'accounts.google.com', 'microsoft.com', 'live.com', 'office.com',
@@ -299,6 +303,17 @@ const handBrandList = [
   'wetransfer.com', 'dropbox.com', 'adobe.com', 'dhl.com', 'fedex.com',
   'ups.com', 'usps.com', 'irs.gov', 'gov.uk', 'ebay.com', 'steamcommunity.com',
   'roblox.com', 'discord.com', 'yahoo.com', 'outlook.com', 'zoom.us',
+  // Regional brands the extension protects (UAE / SE-Asia / India) — banks,
+  // telcos, government services, marketplaces, carriers, airlines.
+  'emiratesnbd.com', 'adcb.com', 'bankfab.com', 'fab.ae', 'mashreq.com', 'mashreqbank.com',
+  'rakbank.ae', 'dib.ae', 'etisalat.ae', 'eand.com', 'eandme.ae', 'du.ae',
+  'talabat.com', 'careem.com', 'dewa.gov.ae', 'icp.gov.ae', 'mohre.gov.ae',
+  'dubaipolice.gov.ae', 'uaepass.ae', 'emirates.com', 'adnoc.ae', 'adnocdistribution.ae',
+  'aramex.com', 'emiratespost.ae', 'epg.gov.ae', 'etihad.com', 'noon.com',
+  'shopee.sg', 'shopee.com.my', 'shopee.co.id', 'shopee.ph', 'shopee.com',
+  'lazada.sg', 'lazada.com.my', 'lazada.com', 'lazada.co.th', 'grab.com',
+  'maybank2u.com.my', 'maybank.com', 'dbs.com.sg', 'dbs.com', 'posb.com.sg',
+  'sbi.co.in', 'onlinesbi.sbi', 'onlinesbi.com', 'hdfcbank.com', 'hdfc.com', 'icicibank.com',
 ];
 
 module.exports = { sources, riskTableSources, nrdSources, NRD_WINDOW_DAYS, handBrandList };
