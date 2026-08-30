@@ -1,5 +1,5 @@
 {
- "version": 20694,
+ "version": 20695,
  "rules": [
   "||criptomixer.io^",
   "||ethereum-mixer.io^",
@@ -176,6 +176,7 @@
   "||foxy-airdrop.com^",
   "||free-5479882.webadorsite.com^",
   "||free-5547865.webadorsite.com^",
+  "||fret-rx.com^",
   "||fullaski.com^",
   "||fuxowin.com^",
   "||fuzawin.com^",
@@ -480,6 +481,7 @@
   "||1netzteil.de^",
   "||1q2h523.cn^",
   "||1sttheworld.com^",
+  "||1url.at^",
   "||1webmail-free.clients-2.com^",
   "||1winbday.today^",
   "||200pills.com^",
@@ -1445,6 +1447,7 @@
   "||butlerssalestore.com^",
   "||buybestmeds.com^",
   "||buyfamgift.de^",
+  "||buyghar.com^",
   "||buyhealthandcaremeds.com^",
   "||buyukeczane.org^",
   "||buyxtoken.com^",
@@ -1959,7 +1962,6 @@
   "||cwqzf.top^",
   "||cxis.cubexpressphilippines.com^",
   "||cxjig.top^",
-  "||cyangrape.top^",
   "||cyber-haus.de^",
   "||cyberduck.it^",
   "||cyberleek.com^",
@@ -2736,7 +2738,6 @@
   "||freiwing.de^",
   "||freizeitjackensalesshop.com^",
   "||fresh-epta-2222.live^",
-  "||fret-rx.com^",
   "||friboo-prada.com^",
   "||friluftsbillig.com^",
   "||friluftsshopde.com^",
@@ -2782,7 +2783,6 @@
   "||g-finwealthfx-investments.com^",
   "||g-mtcc.com^",
   "||g20openletter.org^",
-  "||g5.lu^",
   "||g9ldc.slthenny.com^",
   "||gabbian.de^",
   "||gaborschuhesuisse.com^",
@@ -2868,6 +2868,7 @@
   "||get-plumenetwork.com^",
   "||get-rc.to^",
   "||get-treezr-suit-en.framer.media^",
+  "||get-trezor.com^",
   "||get-trezzore.framer.ai^",
   "||getdrop.live^",
   "||geteth.org^",
@@ -4237,7 +4238,6 @@
   "||navi20.com^",
   "||navi52.com^",
   "||navi90.com^",
-  "||navymelon.top^",
   "||nbdiscount.com^",
   "||neir0c0in.org^",
   "||nelsonscarhire.sc^",
@@ -4668,7 +4668,6 @@
   "||pingpanl.pro^",
   "||pingserv.pro^",
   "||pinkraspberry.top^",
-  "||pinktangerine.top^",
   "||pino-payment-method-verification-solana.live^",
   "||pinothedino.info^",
   "||pioneersxs.com^",
@@ -5000,6 +4999,7 @@
   "||recover-aave.app^",
   "||recovery-humanity.org^",
   "||rectifaiwallet.online^",
-  "||rectifiedmainnet-pages.xyz^"
+  "||rectifiedmainnet-pages.xyz^",
+  "||rectifix.online^"
  ]
 }
