@@ -1,5 +1,5 @@
 {
- "version": 20701,
+ "version": 20702,
  "rules": [
   "||criptomixer.io^",
   "||ethereum-mixer.io^",
@@ -1977,7 +1977,6 @@
   "||cryptofx.cc^",
   "||cryptomixer.guru^",
   "||cryptomixer.io^",
-  "||cryptomus-accept.net^",
   "||cryptomus.casa^",
   "||cryptomus.deals^",
   "||cryptomuspay.net^",
@@ -2485,7 +2484,6 @@
   "||ethikadeutschland.de^",
   "||ethincinerator.digital^",
   "||ethos-network.xyz^",
-  "||ethoxe.top^",
   "||ethsolcommunit.com^",
   "||ethtocheck.com^",
   "||etkick.de^",
@@ -4368,6 +4366,7 @@
   "||nexiradaep.xyz^",
   "||next-neu.de^",
   "||nexte.vip^",
+  "||nextearth-refund.cetus.quest^",
   "||nexuslendall.store^",
   "||neyowin.com^",
   "||nfcarabia.com^",
@@ -5000,6 +4999,7 @@
   "||quickresolver.org^",
   "||quicksepticservice.com^",
   "||quickstackchain.org^",
-  "||quickswap-exchange.com^"
+  "||quickswap-exchange.com^",
+  "||quickswap-v1.com^"
  ]
 }
