@@ -1,6 +1,6 @@
 'use strict';
 const test = require('node:test'); const assert = require('node:assert');
-const { buildHot, applyQuotas, HOT_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT } = require('../scripts/build-hot');
+const { buildHot, applyQuotas, HOT_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, REBASELINE_MIN } = require('../scripts/build-hot');
 const bloomLib = require('../lib/bloom');
 const NOW = 1789000000000; const MIN = Math.floor(NOW / 60000);
 const allow = new Set(['google.com', 'paypal.com']);
@@ -53,8 +53,8 @@ test('buildHot: growth guard rejects a source that grew > 25 % vs the previous r
   assert.strictEqual(hot.domains.length, 0);
 });
 
-test('buildHot: caps at HOT_CAP (12,000) newest first', () => {
-  assert.strictEqual(HOT_CAP, 12000);
+test('buildHot: caps at HOT_CAP (20,000) newest first', () => {
+  assert.strictEqual(HOT_CAP, 20000);
   const src = { phishdestroy: new Set(Array.from({ length: HOT_CAP + 50 }, (_, i) => `h${i}.example`)) };
   const { hot } = buildHot({ sources: src, paths: [], allow, prevState: { seen: {} }, prevBloom: baselineFixture(), now: NOW });
   assert.strictEqual(hot.domains.length, HOT_CAP);
@@ -107,6 +107,9 @@ test('applyQuotas: with every source saturated each gets exactly its quota', () 
     hz: Math.floor(HOT_CAP * QUOTA_PCT.hz),
   });
   assert.strictEqual(Object.values(QUOTA_PCT).reduce((a, b) => a + b, 0).toFixed(2), '1.00');
+  // Round 5: weighted toward the sources that actually produce blocks.
+  assert.deepStrictEqual(QUOTA_PCT, { pd: 0.30, mm: 0.10, pdb: 0.10, mf: 0.15, hz: 0.35 });
+  assert.strictEqual(HOT_CAP, 20000);
 });
 
 test('applyQuotas: unused quota from thin sources is redistributed to fill the cap', () => {
@@ -192,4 +195,52 @@ test('hot builder only reads licence-vetted sources', () => {
   for (const k of HOT_SOURCE_KEYS) assert.ok(keys.has(k), `${k} is not a vetted source`);
   const src = require('fs').readFileSync(require.resolve('../scripts/build-hot'), 'utf8').toLowerCase();
   for (const banned of ['openphish', 'phishtank', 'urlhaus']) assert.ok(!src.includes(banned), banned + ' must not appear');
+});
+
+test('REBASELINE_MIN is the minute of the 2026-09-07T18:11Z gate-fix run', () => {
+  assert.strictEqual(REBASELINE_MIN, Math.floor(Date.parse('2026-09-07T18:11:00Z') / 60000));
+  assert.strictEqual(REBASELINE_MIN, 29813411);
+});
+
+test('buildHot: --rebaseline graduates post-gate-fix hosts and keeps the pre-fix ones', () => {
+  // `old.example` was first seen BEFORE the gate fix -> keeps its original
+  // t and stays in the list. `flood.example` was first seen AT the gate-fix
+  // minute and `flood2.example` after it -> both are backlog, so they go
+  // into the baseline bloom and out of seen/tags/absent.
+  const prev = {
+    seen: { 'old.example': REBASELINE_MIN - 120, 'flood.example': REBASELINE_MIN, 'flood2.example': REBASELINE_MIN + 5 },
+    absent: { 'flood2.example': 1 },
+    counts: {},
+    tags: { 'old.example': 'hz', 'flood.example': 'pd', 'flood2.example': 'pd' },
+  };
+  const src = { phishdestroy: new Set(['old.example', 'flood.example', 'flood2.example']) };
+  const now = (REBASELINE_MIN + 60) * 60000;
+  const { hot, state, rebaselined } = buildHot({ sources: src, paths: [], allow, prevState: prev, prevBloom: baselineFixture(), now, rebaseline: true });
+  assert.strictEqual(rebaselined, 2);
+  assert.deepStrictEqual(Object.keys(state.seen), ['old.example']);
+  assert.strictEqual(state.seen['old.example'], REBASELINE_MIN - 120); // original t preserved
+  assert.strictEqual(state.absent['flood2.example'], undefined);
+  assert.strictEqual(state.tags['flood.example'], undefined);
+  // Only the pre-fix host is emitted; the graduated ones are now "old" via
+  // the bloom, so being present in the sources does not re-add them.
+  assert.deepStrictEqual(hot.domains.map((d) => d.h), ['old.example']);
+});
+
+test('buildHot: without the flag nothing is re-baselined (scheduled runs are unaffected)', () => {
+  const prev = { seen: { 'flood.example': REBASELINE_MIN + 5 }, absent: {}, counts: {}, tags: { 'flood.example': 'pd' } };
+  const src = { phishdestroy: new Set(['flood.example']) };
+  const now = (REBASELINE_MIN + 60) * 60000;
+  const { hot, state, rebaselined } = buildHot({ sources: src, paths: [], allow, prevState: prev, prevBloom: baselineFixture(), now });
+  assert.strictEqual(rebaselined, 0);
+  assert.deepStrictEqual(Object.keys(state.seen), ['flood.example']);
+  assert.deepStrictEqual(hot.domains.map((d) => d.h), ['flood.example']);
+});
+
+test('buildHot: --rebaseline on a bootstrap run is a no-op (bootstrap already folds everything in)', () => {
+  const prev = { seen: { 'flood.example': REBASELINE_MIN + 5 }, absent: {}, counts: {}, tags: {} };
+  const src = { phishdestroy: new Set(['flood.example']) };
+  const now = (REBASELINE_MIN + 60) * 60000;
+  const { hot, rebaselined } = buildHot({ sources: src, paths: [], allow, prevState: prev, prevBloom: null, now, rebaseline: true });
+  assert.strictEqual(rebaselined, 0);
+  assert.deepStrictEqual(hot.domains, []);
 });

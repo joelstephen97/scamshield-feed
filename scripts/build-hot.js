@@ -29,9 +29,27 @@ function tagRank(tag) { const r = TAG_RANK[tag]; return r == null ? RANK_MAX : r
 // starve the others for a full 48 h window; a quota guarantees each source
 // a floor. Any quota a thin source cannot fill is redistributed to the
 // others in TAG_RANK order, so the list still fills to the cap.
-const QUOTA_PCT = { pd: 0.50, mm: 0.15, pdb: 0.15, mf: 0.10, hz: 0.10 };
+// Round 5 re-weighting: the 0.13.0 bench showed 62 of 85 real blocks came
+// from `hz`, whose upstream aggregation makes it the best available proxy
+// for what users actually hit, while `pd`'s bulk tenant-host volume was
+// buying almost no blocks. Weight the quota toward the sources that block,
+// not the ones that are largest. (Deliberately no upstream feed names
+// here — test/hot.test.js asserts this file never mentions a source
+// outside the licence-vetted registry.)
+const QUOTA_PCT = { pd: 0.30, mm: 0.10, pdb: 0.10, mf: 0.15, hz: 0.35 };
 
-const HOT_CAP = 12000; const PATH_CAP = 300; const WINDOW_MIN = 48 * 60; const GROWTH_GUARD = 0.25; const TTL_MINUTES = 360;
+const HOT_CAP = 20000; const PATH_CAP = 300; const WINDOW_MIN = 48 * 60; const GROWTH_GUARD = 0.25; const TTL_MINUTES = 360;
+// One-off re-baseline (round 5). The shared-hosting gate fix
+// (2026-09-07T18:11Z, run 34150584950) let ~104k previously-gated tenant
+// hosts into `seen` all at once with t = that run, which then outranked the
+// genuinely fresh hosts in every newest-first quota slice. Re-baselining
+// pushes everything first recorded AT OR AFTER that minute into the
+// baseline bloom (so it is treated as old and never re-enters `seen`) and
+// leaves the pre-fix hosts with their real first-seen `t`. Opt-in only:
+// `--rebaseline` / HOT_REBASELINE=1 / the workflow_dispatch input.
+// Scheduled runs must never rebaseline.
+const REBASELINE_MIN = Math.floor(Date.parse('2026-09-07T18:11:00Z') / 60000); // 29813411
+
 const PDB_LINKS = 'https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-links-NEW-today.txt';
 // Hosts where badness is path-scoped: the host is Tranco-allowlisted, the path is not.
 const SHARED_PATH_HOSTS = new Set(['sites.google.com', 'docs.google.com', 'drive.google.com', 'forms.office.com', 'rb.gy', 'beacons.ai', 'linktr.ee', 'scan.page', 'scanned.page', 'shorten.is', 'ln.run', 'notion.site']);
@@ -89,7 +107,7 @@ function applyQuotas(candidates, cap) {
   return out;
 }
 
-function buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now }) {
+function buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now, rebaseline }) {
   const nowMin = Math.floor(now / 60000);
   // `tags` persists the last known source tag per host across runs (not
   // part of the documented seen/absent/counts contract, purely additive)
@@ -105,6 +123,22 @@ function buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now })
     ? { mBits: prevBloom.mBits, k: prevBloom.k, bits: Buffer.from(prevBloom.bits), n: prevBloom.n || 0 }
     : newBloomState();
   const bootstrap = !prevBloom;
+
+  // One-off re-baseline: graduate every host whose first-seen minute is at
+  // or after the gate-fix run straight into the bloom and drop it from
+  // seen/tags/absent. Hosts first seen BEFORE that minute keep their `t`
+  // and stay in the list. A no-op unless explicitly requested, and never
+  // combined with bootstrap (which already folds everything into the bloom).
+  let rebaselined = 0;
+  if (rebaseline && !bootstrap) {
+    for (const h of Object.keys(state.seen)) {
+      if (state.seen[h] < REBASELINE_MIN) continue;
+      bloomAdd(bloomState, h);
+      delete state.seen[h]; delete state.absent[h]; delete state.tags[h];
+      rebaselined += 1;
+    }
+    console.error(`[hot] rebaseline: ${rebaselined} post-gate-fix hosts graduated into the baseline, ${Object.keys(state.seen).length} pre-fix hosts kept`);
+  }
 
   const rejected = [];
   const present = new Map(); // host -> first source tag, this run's union
@@ -140,7 +174,7 @@ function buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now })
     for (const h of present.keys()) bloomAdd(bloomState, h);
     console.error('[hot] bootstrap: baseline recorded, no domains emitted');
     const hot = { v: 1, generatedAt: now, ttlMinutes: TTL_MINUTES, domains: [], paths: outPaths, removed: [] };
-    return { hot, state: { seen: {}, absent: {}, counts: state.counts, tags: {} }, rejected, bloom: bloomState };
+    return { hot, state: { seen: {}, absent: {}, counts: state.counts, tags: {} }, rejected, bloom: bloomState, rebaselined: 0 };
   }
 
   // A total outage — every source failed to fetch, or every source that DID
@@ -193,7 +227,7 @@ function buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now })
   const domains = applyQuotas(candidates, HOT_CAP);
 
   const hot = { v: 1, generatedAt: now, ttlMinutes: TTL_MINUTES, domains, paths: outPaths, removed: removed.sort() };
-  return { hot, state, rejected, bloom: bloomState };
+  return { hot, state, rejected, bloom: bloomState, rebaselined };
 }
 
 async function fetchText(url) { const r = await fetch(url, { headers: { 'user-agent': 'scamshield-feed hot builder' } }); if (!r.ok) throw new Error(url + ' -> ' + r.status); return r.text(); }
@@ -226,11 +260,15 @@ async function main() {
     try { prevBloom = bloomLib.parseBloomFile(fs.readFileSync(bloomPath)); }
     catch (e) { console.error(`[hot] baseline bloom unreadable (${e.message}) — rebuilding as bootstrap`); prevBloom = null; }
   }
-  const { hot, state, rejected, bloom } = buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now });
+  const rebaseline = process.argv.includes('--rebaseline') || process.env.HOT_REBASELINE === '1' || process.env.HOT_REBASELINE === 'true';
+  if (rebaseline) console.error('[hot] --rebaseline requested');
+  const { hot, state, rejected, bloom, rebaselined } = buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now, rebaseline });
   fs.writeFileSync('hot.json', JSON.stringify(hot));
   fs.writeFileSync(statePath, JSON.stringify(state));
   fs.writeFileSync(bloomPath, bloomLib.serializeBloomFile({ n: bloom.n, mBits: bloom.mBits, k: bloom.k, bits: bloom.bits }));
-  console.log(`[hot] domains=${hot.domains.length} paths=${hot.paths.length} removed=${hot.removed.length} rejected=${rejected.join(',') || '-'} bytes=${fs.statSync('hot.json').size}`);
+  const bySource = hot.domains.reduce((acc, d) => { acc[d.s] = (acc[d.s] || 0) + 1; return acc; }, {});
+  console.log(`[hot] domains=${hot.domains.length} paths=${hot.paths.length} removed=${hot.removed.length} rejected=${rejected.join(',') || '-'} rebaselined=${rebaselined || 0} bytes=${fs.statSync('hot.json').size}`);
+  console.log(`[hot] perSource=${JSON.stringify(bySource)}`);
 }
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { buildHot, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, BLOOM_CAPACITY, BLOOM_P };
+module.exports = { buildHot, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, REBASELINE_MIN, BLOOM_CAPACITY, BLOOM_P };

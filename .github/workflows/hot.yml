@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '17 * * * *'   # hourly, off the top of the hour (Actions queue is busiest at :00)
   workflow_dispatch:
+    inputs:
+      rebaseline:
+        description: 'One-off: graduate every host first seen at/after the 2026-09-07T18:11Z gate fix into the baseline bloom (see scripts/build-hot.js REBASELINE_MIN). Scheduled runs never do this.'
+        type: boolean
+        default: false
 permissions:
   contents: write
 concurrency:
@@ -21,6 +26,10 @@ jobs:
           git show hot:hot-state.json > hot-state.json 2>/dev/null || echo '{"seen":{},"absent":{},"counts":{},"tags":{}}' > hot-state.json
           git show hot:hot-baseline.bloom > hot-baseline.bloom 2>/dev/null || rm -f hot-baseline.bloom
       - run: node scripts/build-hot.js
+        env:
+          # Only ever set by an explicit workflow_dispatch with the input
+          # ticked; `github.event.inputs.rebaseline` is empty on a schedule.
+          HOT_REBASELINE: ${{ github.event_name == 'workflow_dispatch' && inputs.rebaseline && '1' || '0' }}
       - name: Publish hot.json + state + baseline bloom on the orphan branch `hot` (single commit, no history)
         run: |
           git config user.name "Joel Stephen"
