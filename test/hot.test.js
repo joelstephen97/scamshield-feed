@@ -46,6 +46,22 @@ test('buildHot: caps at HOT_CAP newest first', () => {
   assert.strictEqual(hot.domains.length, HOT_CAP);
 });
 
+test('buildHot: allowlist protects sub-domains of an allowlisted host too (suffix walk via gate.isAllowed)', () => {
+  const allowSub = new Set(['mail.google.com']);
+  const src = { phishdestroy: new Set(['evil.mail.google.com']) };
+  const { hot } = buildHot({ sources: src, paths: [], allow: allowSub, prevState: { seen: {} }, now: NOW });
+  assert.deepStrictEqual(hot.domains, []);
+});
+
+test('buildHot: a total source outage does not evict the list into removed', () => {
+  const prev = { seen: { 'known.example': MIN - 100 }, absent: {}, counts: { phishdestroy: 500 }, tags: { 'known.example': 'pd' } };
+  const { hot, state } = buildHot({ sources: {}, paths: [], allow, prevState: prev, now: NOW });
+  assert.deepStrictEqual(hot.domains, [{ h: 'known.example', s: 'pd', t: MIN - 100 }]);
+  assert.deepStrictEqual(hot.removed, []);
+  assert.strictEqual(state.seen['known.example'], MIN - 100);
+  assert.strictEqual(state.absent['known.example'], undefined);
+});
+
 test('hot builder only reads licence-vetted sources', () => {
   const { sources: registry } = require('../sources');
   const keys = new Set(registry.filter((s) => s.enabled !== false).map((s) => s.key));

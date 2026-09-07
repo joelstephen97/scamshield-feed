@@ -5,8 +5,8 @@
 // on the orphan branch `hot`. See README "Hot list".
 const fs = require('fs'); const path = require('path');
 const { sources, handBrandList } = require('../sources');
-const { normalizeHost, registrableDomain } = require('../lib/normalize');
-const { buildAllowlist } = require('../lib/gate');
+const { normalizeHost } = require('../lib/normalize');
+const { buildAllowlist, isAllowed } = require('../lib/gate');
 const { fetchTrancoTop, DEFAULT_TOP_N } = require('../lib/tranco');
 
 // Exact `key` values from sources.js — confirmed 2026-09-07 against the
@@ -22,7 +22,11 @@ const SHARED_PATH_HOSTS = new Set(['sites.google.com', 'docs.google.com', 'drive
 
 function buildHot({ sources: srcSets, paths, allow, prevState, now }) {
   const nowMin = Math.floor(now / 60000);
-  const state = { seen: Object.assign({}, prevState.seen || {}), absent: Object.assign({}, prevState.absent || {}), counts: {} };
+  // `tags` persists the last known source tag per host across runs (not
+  // part of the documented seen/absent/counts contract, purely additive)
+  // so a total source outage (see below) can still label previously-known
+  // hosts in the emitted domains[] instead of inventing a fake tag.
+  const state = { seen: Object.assign({}, prevState.seen || {}), absent: Object.assign({}, prevState.absent || {}), counts: {}, tags: Object.assign({}, prevState.tags || {}) };
   const rejected = [];
   const present = new Map(); // host -> first source tag
   for (const key of Object.keys(srcSets)) {
@@ -30,21 +34,42 @@ function buildHot({ sources: srcSets, paths, allow, prevState, now }) {
     const prevCount = prevState.counts && prevState.counts[key];
     if (prevCount && set.size > prevCount * (1 + GROWTH_GUARD)) { rejected.push(key); continue; }
     for (const h of set) {
-      if (allow.has(h) || allow.has(registrableDomain(h))) continue;
+      // Reuse lib/gate.js's isAllowed() — a full suffix walk — instead of a
+      // single registrable-domain check, so an allowlist entry that is
+      // itself an intermediate sub-domain (e.g. only "mail.google.com" is
+      // listed) still protects a deeper sub-domain like
+      // "evil.mail.google.com" the way build.js's own gate does.
+      if (isAllowed(h, allow)) continue;
       if (!present.has(h)) present.set(h, TAG[key] || key);
     }
   }
-  for (const h of present.keys()) { if (state.seen[h] == null) state.seen[h] = nowMin; delete state.absent[h]; }
-  const removed = [];
-  for (const h of Object.keys(state.seen)) {
-    if (present.has(h)) continue;
-    state.absent[h] = (state.absent[h] || 0) + 1;
-    if (state.absent[h] >= 2) { removed.push(h); delete state.seen[h]; delete state.absent[h]; }
+  // A total outage — every source failed to fetch, or every source that DID
+  // fetch was rejected by the growth guard above — means `present` carries
+  // no signal at all this run. Treat that as "no information", not "every
+  // host disappeared": skip the absent/removed bookkeeping entirely so two
+  // consecutive bad hours don't evict the whole list into `removed`, and
+  // fall back to re-emitting the previously-known, still-in-window hosts
+  // from `state.seen` so `domains` doesn't go blank for one bad run.
+  const contributed = Object.keys(srcSets).length - rejected.length;
+  const outage = contributed === 0;
+  for (const h of present.keys()) {
+    if (state.seen[h] == null) state.seen[h] = nowMin;
+    state.tags[h] = present.get(h);
+    delete state.absent[h];
   }
-  const domains = [...present.keys()].map((h) => ({ h, s: present.get(h), t: state.seen[h] }))
+  const removed = [];
+  if (!outage) {
+    for (const h of Object.keys(state.seen)) {
+      if (present.has(h)) continue;
+      state.absent[h] = (state.absent[h] || 0) + 1;
+      if (state.absent[h] >= 2) { removed.push(h); delete state.seen[h]; delete state.absent[h]; delete state.tags[h]; }
+    }
+  }
+  const domainHosts = outage ? Object.keys(state.seen) : [...present.keys()];
+  const domains = domainHosts.map((h) => ({ h, s: present.get(h) || state.tags[h], t: state.seen[h] }))
     .filter((d) => d.t >= nowMin - WINDOW_MIN).sort((a, b) => b.t - a.t).slice(0, HOT_CAP);
   const outPaths = (paths || [])
-    .filter((p) => SHARED_PATH_HOSTS.has(p.h) || !allow.has(registrableDomain(p.h)))
+    .filter((p) => SHARED_PATH_HOSTS.has(p.h) || !isAllowed(p.h, allow))
     .map((p) => ({ h: p.h, p: p.p, s: p.s, t: nowMin })).slice(0, PATH_CAP);
   const hot = { v: 1, generatedAt: now, ttlMinutes: TTL_MINUTES, domains, paths: outPaths, removed: removed.sort() };
   return { hot, state, rejected };
