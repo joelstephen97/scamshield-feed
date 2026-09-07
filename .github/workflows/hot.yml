@@ -15,16 +15,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - name: Restore previous hot state from the hot branch
+      - name: Restore previous hot state + baseline bloom from the hot branch
         run: |
           git fetch origin hot:hot || true
-          git show hot:hot-state.json > hot-state.json 2>/dev/null || echo '{"seen":{},"absent":{},"counts":{}}' > hot-state.json
+          git show hot:hot-state.json > hot-state.json 2>/dev/null || echo '{"seen":{},"absent":{},"counts":{},"tags":{}}' > hot-state.json
+          git show hot:hot-baseline.bloom > hot-baseline.bloom 2>/dev/null || rm -f hot-baseline.bloom
       - run: node scripts/build-hot.js
-      - name: Publish hot.json on the orphan branch `hot` (single commit, no history)
+      - name: Publish hot.json + state + baseline bloom on the orphan branch `hot` (single commit, no history)
         run: |
           git config user.name "Joel Stephen"
           git config user.email "joelstephen97@users.noreply.github.com"
-          mkdir -p /tmp/hotpub && cp hot.json hot-state.json /tmp/hotpub/
-          git checkout --orphan hot-new && git rm -rfq . && cp /tmp/hotpub/* . && git add hot.json hot-state.json
+          mkdir -p /tmp/hotpub && cp hot.json hot-state.json hot-baseline.bloom /tmp/hotpub/
+          git checkout --orphan hot-new && git rm -rfq . && cp /tmp/hotpub/* . && git add hot.json hot-state.json hot-baseline.bloom
           git commit -qm "hot: $(date -u +%Y-%m-%dT%H:%MZ)"
           git push -f origin hot-new:hot
