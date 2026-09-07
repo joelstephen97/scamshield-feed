@@ -1,6 +1,6 @@
 'use strict';
 const test = require('node:test'); const assert = require('node:assert');
-const { buildHot, HOT_CAP, WINDOW_MIN, HOT_SOURCE_KEYS } = require('../scripts/build-hot');
+const { buildHot, HOT_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK } = require('../scripts/build-hot');
 const bloomLib = require('../lib/bloom');
 const NOW = 1789000000000; const MIN = Math.floor(NOW / 60000);
 const allow = new Set(['google.com', 'paypal.com']);
@@ -53,10 +53,31 @@ test('buildHot: growth guard rejects a source that grew > 25 % vs the previous r
   assert.strictEqual(hot.domains.length, 0);
 });
 
-test('buildHot: caps at HOT_CAP newest first', () => {
+test('buildHot: caps at HOT_CAP (12,000) newest first', () => {
+  assert.strictEqual(HOT_CAP, 12000);
   const src = { phishdestroy: new Set(Array.from({ length: HOT_CAP + 50 }, (_, i) => `h${i}.example`)) };
   const { hot } = buildHot({ sources: src, paths: [], allow, prevState: { seen: {} }, prevBloom: baselineFixture(), now: NOW });
   assert.strictEqual(hot.domains.length, HOT_CAP);
+});
+
+test('buildHot: when the cap binds, source priority keeps pd and cuts hz', () => {
+  // Key order matters: srcSets is walked in insertion order, so a host in
+  // several sources keeps the highest-priority tag.
+  const src = {
+    phishdestroy: new Set(Array.from({ length: 100 }, (_, i) => `pd${i}.example`)),
+    'hagezi-tif-medium': new Set(Array.from({ length: HOT_CAP }, (_, i) => `hz${i}.example`)),
+  };
+  const { hot } = buildHot({ sources: src, paths: [], allow, prevState: { seen: {} }, prevBloom: baselineFixture(), now: NOW });
+  assert.strictEqual(hot.domains.length, HOT_CAP);
+  const bySource = hot.domains.reduce((acc, d) => { acc[d.s] = (acc[d.s] || 0) + 1; return acc; }, {});
+  // Every pd host survives; hz is the source that gets sliced off.
+  assert.strictEqual(bySource.pd, 100);
+  assert.strictEqual(bySource.hz, HOT_CAP - 100);
+  // ...and pd sorts ahead of hz in the emitted order.
+  assert.strictEqual(hot.domains[0].s, 'pd');
+  assert.strictEqual(hot.domains[99].s, 'pd');
+  assert.strictEqual(hot.domains[100].s, 'hz');
+  assert.strictEqual(TAG_RANK.pd < TAG_RANK.hz, true);
 });
 
 test('buildHot: allowlist protects sub-domains of an allowlisted host too (suffix walk via gate.isAllowed)', () => {

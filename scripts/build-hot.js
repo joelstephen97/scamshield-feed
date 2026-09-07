@@ -16,7 +16,15 @@ const bloomLib = require('../lib/bloom');
 // 'hagezi-tif-medium').
 const HOT_SOURCE_KEYS = ['phishdestroy', 'metamask-eth-phishing', 'phishing-database', 'malware-filter-phishing', 'hagezi-tif-medium'];
 const TAG = { phishdestroy: 'pd', 'metamask-eth-phishing': 'mm', 'phishing-database': 'pdb', 'malware-filter-phishing': 'mf', 'hagezi-tif-medium': 'hz' };
-const HOT_CAP = 4000; const PATH_CAP = 300; const WINDOW_MIN = 48 * 60; const GROWTH_GUARD = 0.25; const TTL_MINUTES = 360;
+// Source priority for the HOT_CAP slice. HaGeZi TIF is broad threat
+// intel on an 8-hourly bulk cadence and dwarfs the others (~3.5k of every
+// 4k slots before this change), so when the cap binds it is the one that
+// gets cut — the phishing-specific, fast-cadence sources are kept first.
+const TAG_RANK = { pd: 0, mm: 1, pdb: 2, mf: 3, hz: 4 };
+const RANK_MAX = 99;
+function tagRank(tag) { const r = TAG_RANK[tag]; return r == null ? RANK_MAX : r; }
+
+const HOT_CAP = 12000; const PATH_CAP = 300; const WINDOW_MIN = 48 * 60; const GROWTH_GUARD = 0.25; const TTL_MINUTES = 360;
 const PDB_LINKS = 'https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-links-NEW-today.txt';
 // Hosts where badness is path-scoped: the host is Tranco-allowlisted, the path is not.
 const SHARED_PATH_HOSTS = new Set(['sites.google.com', 'docs.google.com', 'drive.google.com', 'forms.office.com', 'rb.gy', 'beacons.ai', 'linktr.ee', 'scan.page', 'scanned.page', 'shorten.is', 'ln.run', 'notion.site']);
@@ -137,8 +145,11 @@ function buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now })
   // `seen` now only holds in-window hosts (graduation above already pruned
   // anything older), so no extra window filter is needed here.
   const domainHosts = outage ? Object.keys(state.seen) : [...present.keys()].filter((h) => state.seen[h] != null);
+  // Order by source priority first (pd > mm > pdb > mf > hz), newest first
+  // within a rank, THEN slice to HOT_CAP — so a binding cap sheds the bulk
+  // low-priority source rather than whatever happens to be oldest.
   const domains = domainHosts.map((h) => ({ h, s: present.get(h) || state.tags[h] || 'unk', t: state.seen[h] }))
-    .sort((a, b) => b.t - a.t).slice(0, HOT_CAP);
+    .sort((a, b) => (tagRank(a.s) - tagRank(b.s)) || (b.t - a.t)).slice(0, HOT_CAP);
 
   const hot = { v: 1, generatedAt: now, ttlMinutes: TTL_MINUTES, domains, paths: outPaths, removed: removed.sort() };
   return { hot, state, rejected, bloom: bloomState };
@@ -181,4 +192,4 @@ async function main() {
   console.log(`[hot] domains=${hot.domains.length} paths=${hot.paths.length} removed=${hot.removed.length} rejected=${rejected.join(',') || '-'} bytes=${fs.statSync('hot.json').size}`);
 }
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { buildHot, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, BLOOM_CAPACITY, BLOOM_P };
+module.exports = { buildHot, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, BLOOM_CAPACITY, BLOOM_P };
