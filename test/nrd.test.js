@@ -112,6 +112,32 @@ test('a source fetch/parse failure with no cache continues on error (0 domains, 
   assert.equal(parsed.n, 0);
 });
 
+test('a Tranco-allowlisted host present in the NRD fixture is excluded from nrd.bloom (0.13.0)', async () => {
+  const writeDir = tmpDir('parry-feed-nrd-gate-');
+  const cacheDir = tmpDir('parry-feed-nrd-gate-cache-');
+  const offlineDir = tmpDir('parry-feed-nrd-gate-offline-');
+  for (const f of fs.readdirSync(FIXTURES_BASE)) {
+    fs.copyFileSync(path.join(FIXTURES_BASE, f), path.join(offlineDir, f));
+  }
+  // Add an NRD-fixture host to the Tranco allowlist fixture — mirrors the
+  // real false positive (doi.org): a decades-old, Tranco top-100k domain
+  // that a noisy/stale upstream NRD source nonetheless lists.
+  fs.appendFileSync(path.join(offlineDir, 'tranco.csv'), '\n3,nrd-fresh-one.example\n');
+
+  const result = await runBuild({
+    repoRoot: writeDir, offlineDir, cacheDir, prevDir: writeDir, writeDir,
+    now: new Date('2026-08-29T10:00:00Z'),
+  });
+
+  const bloomPath = path.join(result.outDir, 'nrd.bloom');
+  const parsed = Bloom.parseBloomFile(fs.readFileSync(bloomPath));
+  assert.equal(Bloom.testHostInFile(parsed, 'nrd-fresh-one.example'), false,
+    'Tranco-allowlisted host must be excluded from nrd.bloom');
+  // A non-allowlisted NRD host from the same source is unaffected.
+  assert.equal(Bloom.testHostInFile(parsed, 'nrd-fresh-two.example'), true);
+  assert.equal(result.meta.nrd.n, 8, 'n drops by exactly the one gated host (9 -> 8)');
+});
+
 test('identical NRD inputs produce a byte-identical nrd.bloom across independent reruns', async () => {
   const now = new Date('2026-08-29T10:00:00Z');
   const dirA = tmpDir('parry-feed-nrd-it-a-');

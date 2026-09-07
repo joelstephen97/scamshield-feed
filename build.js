@@ -330,6 +330,13 @@ async function runBuild(opts = {}) {
       status: result.status,
     });
   }
+  // Gate nrd.bloom through the SAME allowlist (Tranco top-100k union
+  // MetaMask/hand-brand list) as the block/warn union above (0.13.0):
+  // upstream NRD sources are noisy/stale enough to list a decades-old
+  // Tranco-ranked domain (extension-side false positive reproduced on
+  // doi.org, bench 2026-09-06) — a Bloom-positive "new site" hit on a site
+  // that's actually in the top-100k must never be possible.
+  for (const h of nrdHostSet) if (isAllowed(h, allowlist)) nrdHostSet.delete(h);
   const nrdBuilt = buildBloom(nrdHostSet, { p: NRD_TARGET_P });
   const nrdBloomBuf = serializeBloomFile(nrdBuilt);
   const sha256Nrd = crypto.createHash('sha256').update(nrdBloomBuf).digest('hex');
