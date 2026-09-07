@@ -1,5 +1,5 @@
 {
- "version": 20702,
+ "version": 20703,
  "rules": [
   "||criptomixer.io^",
   "||ethereum-mixer.io^",
@@ -1650,6 +1650,7 @@
   "||claim-ether.xyz^",
   "||claim-evr.org^",
   "||claim-exit.xyz^",
+  "||claim-flap.sh^",
   "||claim-folks.xyz^",
   "||claim-fortraders.com^",
   "||claim-humidifi.org^",
@@ -1832,6 +1833,7 @@
   "||collect-fifacashback.com^",
   "||collect-foundation.com^",
   "||collect-pump.fun^",
+  "||collectible-porsche.com^",
   "||collection-lasts.com^",
   "||colnbase.cccma.com^",
   "||colnbase.tinaninternational.com^",
@@ -4998,8 +5000,6 @@
   "||rails-dex.org^",
   "||rain-one.xyz^",
   "||rainbet-ca.bet^",
-  "||rainbet-casino.co.nz^",
-  "||rainbet-fr.fr^",
-  "||rainbet-france.fr^"
+  "||rainbet-casino.co.nz^"
  ]
 }
