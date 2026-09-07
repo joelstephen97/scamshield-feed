@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: feed-publish # never race the hourly hot-list workflow's push
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest

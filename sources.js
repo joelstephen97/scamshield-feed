@@ -30,6 +30,11 @@ const sources = [
     license: 'MIT',
     homepage: 'https://github.com/Phishing-Database/Phishing.Database',
     url: 'https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-domains-ACTIVE.txt',
+    // measured cadence 2026-09-07: ~4 h (phishing-domains-NEW-today.txt +
+    // phishing-links-NEW-today.txt). hotUrl feeds the hourly hot-list
+    // builder (scripts/build-hot.js) — the "today" delta file, not the
+    // full ACTIVE snapshot the 6-hourly build.js uses above.
+    hotUrl: 'https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-domains-NEW-today.txt',
     format: 'list',
     offlineFile: 'phishing-database.txt',
     enabled: true,
@@ -42,6 +47,7 @@ const sources = [
     license: 'MIT',
     homepage: 'https://github.com/PhishDestroy/destroylist',
     url: 'https://raw.githubusercontent.com/phishdestroy/destroylist/main/dns/active_domains.txt',
+    // measured cadence 2026-09-07: ~9 min (dns/active_domains.txt).
     format: 'list',
     offlineFile: 'phishdestroy.txt',
     enabled: true,
@@ -66,6 +72,7 @@ const sources = [
     license: 'DBAD-1.2 (permissive; data reused, no code)',
     homepage: 'https://github.com/MetaMask/eth-phishing-detect',
     url: 'https://raw.githubusercontent.com/MetaMask/eth-phishing-detect/main/src/config.json',
+    // measured cadence 2026-09-07: ~2 min (src/config.json `blacklist`).
     format: 'metamask-config',
     offlineFile: 'metamask-eth-phishing.json',
     enabled: true,
@@ -123,6 +130,7 @@ const sources = [
     // scripts; the list.txt from the digest is a generated CI artifact
     // served from Pages, not committed to the repo tree).
     url: 'https://malware-filter.gitlab.io/phishing-filter/phishing-filter-agh.txt',
+    // measured cadence 2026-09-07: ~12 h (phishing-filter-agh.txt).
     format: 'adblock',
     offlineFile: 'malware-filter-phishing.txt',
     enabled: true,
@@ -147,6 +155,7 @@ const sources = [
     license: 'GPL-3.0',
     homepage: 'https://github.com/hagezi/dns-blocklists',
     url: 'https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif.medium-onlydomains.txt',
+    // measured cadence 2026-09-07: ~8 h (tif.medium-onlydomains.txt).
     format: 'list',
     offlineFile: 'hagezi-tif-medium.txt',
     enabled: true,

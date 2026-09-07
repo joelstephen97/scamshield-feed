@@ -102,6 +102,67 @@ when jsDelivr is unreachable.
 Deltas only exist for the block tier (`set40.bin`). The warn tier has no
 delta mechanism — `warn40.bin` is small enough to refetch in full each cycle.
 
+## Hot list
+
+The 6-hourly build above is deliberately conservative (poisoning guards,
+2-source corroboration, full re-fetch of every source). That is too slow for
+domains that live for minutes — DNS takedowns and browser blocklists mean a
+fresh phishing kit's useful life is often shorter than 6 hours. `scripts/
+build-hot.js` runs **hourly** against a narrow set of the fastest-moving
+licence-vetted sources already in `sources.js` (PhishDestroy, MetaMask
+eth-phishing-detect, Phishing.Database's "NEW today" delta files,
+malware-filter's phishing-filter, and HaGeZi's TIF-medium list — see
+`HOT_SOURCE_KEYS` in the script) and publishes a small, fast-changing
+`hot.json` on its own **orphan branch, `hot`**, so it never adds to `main`'s
+history:
+
+```
+https://raw.githubusercontent.com/joelstephen97/scamshield-feed/hot/hot.json
+```
+
+"Hot" means **first seen by this builder within the last 48 hours** — a host
+drops out of `hot.json`'s `domains[]` once it ages past the window (it is
+presumed already covered by the next 6-hourly full build by then), and a
+host absent from every hot source for two consecutive hourly runs is listed
+once in `removed[]` so a consumer can evict it from a local cache. State
+(`hot-state.json`, first-seen timestamps + per-source counts) is versioned
+alongside `hot.json` on the `hot` branch so each hourly run can pick up
+where the last one left off. A per-source growth guard rejects any source
+whose host count jumps more than 25% versus its last run (a feed outage or
+poisoning symptom) rather than ingesting a spike. Output caps at 4,000
+domains / 300 paths (newest-first) per run.
+
+`hot.json` format:
+
+```json
+{
+  "v": 1,
+  "generatedAt": 1789000000000,
+  "ttlMinutes": 360,
+  "domains": [{ "h": "new-kit.example", "s": "pd", "t": 29816666 }],
+  "paths": [{ "h": "rb.gy", "p": "/88c5r3", "s": "pdb", "t": 29816666 }],
+  "removed": ["gone.example"]
+}
+```
+
+`s` is a short source tag (`pd` PhishDestroy, `mm` MetaMask, `pdb`
+Phishing.Database, `mf` malware-filter, `hz` HaGeZi TIF); `t` is the
+first-seen time in minutes-since-epoch. `paths[]` exists because some abuse
+lives on a shared, otherwise-legitimate host (URL shorteners, Google
+Forms/Sites, Linktree, Notion pages) where the *host* is correctly
+Tranco-allowlisted but a specific *path* on it is not — see
+`SHARED_PATH_HOSTS` in `scripts/build-hot.js`.
+
+Run it locally: `node scripts/build-hot.js` (writes `hot.json` +
+`hot-state.json` at the repo root — both are gitignored on `main`, since
+they only ever live on the `hot` branch). The GitHub Actions workflow
+(`.github/workflows/hot.yml`) runs it hourly, restores the previous
+`hot-state.json` from the `hot` branch, then force-pushes a single fresh
+commit to `hot` (no history growth) — see the workflow for the orphan-branch
+publish mechanics. Both `hot.yml` and `build.yml` share a `concurrency`
+group (`feed-publish`) so the hourly and 6-hourly publishers never race each
+other's push.
+
 ## License
 
 **This repository (code) is GPL-3.0** (`LICENSE`) — several of the
