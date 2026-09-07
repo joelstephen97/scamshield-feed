@@ -1,6 +1,6 @@
 'use strict';
 const test = require('node:test'); const assert = require('node:assert');
-const { buildHot, HOT_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK } = require('../scripts/build-hot');
+const { buildHot, applyQuotas, HOT_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT } = require('../scripts/build-hot');
 const bloomLib = require('../lib/bloom');
 const NOW = 1789000000000; const MIN = Math.floor(NOW / 60000);
 const allow = new Set(['google.com', 'paypal.com']);
@@ -60,6 +60,8 @@ test('buildHot: caps at HOT_CAP (12,000) newest first', () => {
   assert.strictEqual(hot.domains.length, HOT_CAP);
 });
 
+const countBySource = (domains) => domains.reduce((acc, d) => { acc[d.s] = (acc[d.s] || 0) + 1; return acc; }, {});
+
 test('buildHot: when the cap binds, source priority keeps pd and cuts hz', () => {
   // Key order matters: srcSets is walked in insertion order, so a host in
   // several sources keeps the highest-priority tag.
@@ -69,8 +71,8 @@ test('buildHot: when the cap binds, source priority keeps pd and cuts hz', () =>
   };
   const { hot } = buildHot({ sources: src, paths: [], allow, prevState: { seen: {} }, prevBloom: baselineFixture(), now: NOW });
   assert.strictEqual(hot.domains.length, HOT_CAP);
-  const bySource = hot.domains.reduce((acc, d) => { acc[d.s] = (acc[d.s] || 0) + 1; return acc; }, {});
-  // Every pd host survives; hz is the source that gets sliced off.
+  const bySource = countBySource(hot.domains);
+  // Every pd host survives; hz absorbs the rest via quota redistribution.
   assert.strictEqual(bySource.pd, 100);
   assert.strictEqual(bySource.hz, HOT_CAP - 100);
   // ...and pd sorts ahead of hz in the emitted order.
@@ -78,6 +80,49 @@ test('buildHot: when the cap binds, source priority keeps pd and cuts hz', () =>
   assert.strictEqual(hot.domains[99].s, 'pd');
   assert.strictEqual(hot.domains[100].s, 'hz');
   assert.strictEqual(TAG_RANK.pd < TAG_RANK.hz, true);
+});
+
+test('applyQuotas: a saturated pd cannot crowd out a thin fresh source', () => {
+  // Round 3 regression: strict rank priority let a 20k pd backlog take
+  // every slot, starving mm/pdb/mf/hz for a full 48 h window.
+  const mk = (n, s) => Array.from({ length: n }, (_, i) => ({ h: `${s}${i}.example`, s, t: 1000 - i }));
+  const out = applyQuotas([...mk(20000, 'pd'), ...mk(100, 'mm')], HOT_CAP);
+  const by = countBySource(out);
+  assert.strictEqual(out.length, HOT_CAP);
+  assert.strictEqual(by.mm, 100);              // every mm host survives
+  assert.strictEqual(by.pd, HOT_CAP - 100);    // pd gets the remaining slots
+  // Within a source it is newest-first.
+  assert.strictEqual(out.find((d) => d.s === 'mm').h, 'mm0.example');
+});
+
+test('applyQuotas: with every source saturated each gets exactly its quota', () => {
+  const mk = (n, s) => Array.from({ length: n }, (_, i) => ({ h: `${s}${i}.example`, s, t: 1000 - i }));
+  const out = applyQuotas(['pd', 'mm', 'pdb', 'mf', 'hz'].flatMap((s) => mk(20000, s)), HOT_CAP);
+  assert.strictEqual(out.length, HOT_CAP);
+  assert.deepStrictEqual(countBySource(out), {
+    pd: Math.floor(HOT_CAP * QUOTA_PCT.pd),
+    mm: Math.floor(HOT_CAP * QUOTA_PCT.mm),
+    pdb: Math.floor(HOT_CAP * QUOTA_PCT.pdb),
+    mf: Math.floor(HOT_CAP * QUOTA_PCT.mf),
+    hz: Math.floor(HOT_CAP * QUOTA_PCT.hz),
+  });
+  assert.strictEqual(Object.values(QUOTA_PCT).reduce((a, b) => a + b, 0).toFixed(2), '1.00');
+});
+
+test('applyQuotas: unused quota from thin sources is redistributed to fill the cap', () => {
+  const mk = (n, s) => Array.from({ length: n }, (_, i) => ({ h: `${s}${i}.example`, s, t: 1000 - i }));
+  const out = applyQuotas([...mk(200, 'pd'), ...mk(20000, 'hz')], HOT_CAP);
+  const by = countBySource(out);
+  assert.strictEqual(out.length, HOT_CAP);     // filled to the cap despite a thin pd
+  assert.strictEqual(by.pd, 200);
+  assert.strictEqual(by.hz, HOT_CAP - 200);    // hz absorbs pd/mm/pdb/mf's unused quota
+});
+
+test('applyQuotas: a total under the cap is emitted whole', () => {
+  const mk = (n, s) => Array.from({ length: n }, (_, i) => ({ h: `${s}${i}.example`, s, t: 1000 - i }));
+  const out = applyQuotas([...mk(10, 'pd'), ...mk(5, 'hz')], HOT_CAP);
+  assert.strictEqual(out.length, 15);
+  assert.deepStrictEqual(countBySource(out), { pd: 10, hz: 5 });
 });
 
 test('buildHot: allowlist protects sub-domains of an allowlisted host too (suffix walk via gate.isAllowed)', () => {

@@ -24,6 +24,13 @@ const TAG_RANK = { pd: 0, mm: 1, pdb: 2, mf: 3, hz: 4 };
 const RANK_MAX = 99;
 function tagRank(tag) { const r = TAG_RANK[tag]; return r == null ? RANK_MAX : r; }
 
+// Per-source share of HOT_CAP. Strict rank priority (round 3) let one
+// source that happened to be sitting on a backlog take every slot and
+// starve the others for a full 48 h window; a quota guarantees each source
+// a floor. Any quota a thin source cannot fill is redistributed to the
+// others in TAG_RANK order, so the list still fills to the cap.
+const QUOTA_PCT = { pd: 0.50, mm: 0.15, pdb: 0.15, mf: 0.10, hz: 0.10 };
+
 const HOT_CAP = 12000; const PATH_CAP = 300; const WINDOW_MIN = 48 * 60; const GROWTH_GUARD = 0.25; const TTL_MINUTES = 360;
 const PDB_LINKS = 'https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-links-NEW-today.txt';
 // Hosts where badness is path-scoped: the host is Tranco-allowlisted, the path is not.
@@ -44,6 +51,43 @@ function newBloomState() {
 }
 function bloomHas(b, host) { return bloomLib.testHost(b.bits, b.mBits, b.k, host); }
 function bloomAdd(b, host) { bloomLib.addHost(b.bits, b.mBits, b.k, host); b.n += 1; }
+
+// Fill `cap` slots from `candidates` under the QUOTA_PCT per-source split.
+// Each source gets its quota of its own newest-first hosts; whatever quota
+// a thin source leaves unused is handed to the remaining sources in
+// TAG_RANK order (pd -> mm -> pdb -> mf -> hz, unknown tags last) until the
+// cap is full or nothing is left. Output is ordered by rank, then newest
+// first, so the emitted list is deterministic.
+function applyQuotas(candidates, cap) {
+  const byTag = new Map();
+  for (const d of candidates) {
+    if (!byTag.has(d.s)) byTag.set(d.s, []);
+    byTag.get(d.s).push(d);
+  }
+  const tags = [...byTag.keys()].sort((a, b) => tagRank(a) - tagRank(b));
+  for (const tag of tags) byTag.get(tag).sort((a, b) => b.t - a.t);
+
+  // Pass 1: each source takes up to its own quota.
+  const taken = new Map();
+  let used = 0;
+  for (const tag of tags) {
+    const quota = Math.floor(cap * (QUOTA_PCT[tag] || 0));
+    const n = Math.min(quota, byTag.get(tag).length);
+    taken.set(tag, n); used += n;
+  }
+  // Pass 2: redistribute every unused slot in priority order.
+  for (const tag of tags) {
+    if (used >= cap) break;
+    const avail = byTag.get(tag).length - taken.get(tag);
+    if (avail <= 0) continue;
+    const extra = Math.min(avail, cap - used);
+    taken.set(tag, taken.get(tag) + extra); used += extra;
+  }
+
+  const out = [];
+  for (const tag of tags) out.push(...byTag.get(tag).slice(0, taken.get(tag)));
+  return out;
+}
 
 function buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now }) {
   const nowMin = Math.floor(now / 60000);
@@ -145,11 +189,8 @@ function buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now })
   // `seen` now only holds in-window hosts (graduation above already pruned
   // anything older), so no extra window filter is needed here.
   const domainHosts = outage ? Object.keys(state.seen) : [...present.keys()].filter((h) => state.seen[h] != null);
-  // Order by source priority first (pd > mm > pdb > mf > hz), newest first
-  // within a rank, THEN slice to HOT_CAP — so a binding cap sheds the bulk
-  // low-priority source rather than whatever happens to be oldest.
-  const domains = domainHosts.map((h) => ({ h, s: present.get(h) || state.tags[h] || 'unk', t: state.seen[h] }))
-    .sort((a, b) => (tagRank(a.s) - tagRank(b.s)) || (b.t - a.t)).slice(0, HOT_CAP);
+  const candidates = domainHosts.map((h) => ({ h, s: present.get(h) || state.tags[h] || 'unk', t: state.seen[h] }));
+  const domains = applyQuotas(candidates, HOT_CAP);
 
   const hot = { v: 1, generatedAt: now, ttlMinutes: TTL_MINUTES, domains, paths: outPaths, removed: removed.sort() };
   return { hot, state, rejected, bloom: bloomState };
@@ -192,4 +233,4 @@ async function main() {
   console.log(`[hot] domains=${hot.domains.length} paths=${hot.paths.length} removed=${hot.removed.length} rejected=${rejected.join(',') || '-'} bytes=${fs.statSync('hot.json').size}`);
 }
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { buildHot, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, BLOOM_CAPACITY, BLOOM_P };
+module.exports = { buildHot, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, BLOOM_CAPACITY, BLOOM_P };
