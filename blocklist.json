@@ -1,5 +1,5 @@
 {
- "version": 20712,
+ "version": 20713,
  "rules": [
   "||criptomixer.io^",
   "||ethereum-mixer.io^",
