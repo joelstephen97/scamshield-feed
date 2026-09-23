@@ -1,5 +1,5 @@
 {
- "version": 20718,
+ "version": 20719,
  "rules": [
   "||criptomixer.io^",
   "||ethereum-mixer.io^",
@@ -485,6 +485,7 @@
   "||rewards-strata.app^",
   "||rexawin.com^",
   "||robinnhodlognw.github.io^",
+  "||robiox.com.py^",
   "||robiox.com.ua^",
   "||roblox.com.kz^",
   "||roblox.com.py^",
@@ -4999,7 +5000,6 @@
   "||leaderboardvotelist-ux.netlify.app^",
   "||leadingchoiceboard-bns.netlify.app^",
   "||leadingvotingscore-bns.netlify.app^",
-  "||leadpluss.com^",
-  "||lear-trezorsuite.vercel.app^"
+  "||leadpluss.com^"
  ]
 }
