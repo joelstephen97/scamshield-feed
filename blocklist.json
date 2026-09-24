@@ -1,5 +1,5 @@
 {
- "version": 20719,
+ "version": 20720,
  "rules": [
   "||criptomixer.io^",
   "||ethereum-mixer.io^",
@@ -1712,7 +1712,6 @@
   "||bio-ledger.org^",
   "||biocloudfinance.com^",
   "||biocybernet.com^",
-  "||biolgrejuxoways.digital^",
   "||biplasvegas.com^",
   "||bir365.com^",
   "||biranco.com^",
@@ -5000,6 +4999,7 @@
   "||kra18.com^",
   "||kra18at.cc^",
   "||kra18att.cc^",
-  "||kra20-at.cc^"
+  "||kra20-at.cc^",
+  "||kra20at.cc^"
  ]
 }
