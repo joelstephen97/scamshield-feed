@@ -1,5 +1,5 @@
 {
- "version": 20729,
+ "version": 20730,
  "rules": [
   "||ethereum-mixer.io^",
   "||kryptomixer.io^",
@@ -523,7 +523,6 @@
   "||tibesti.net^",
   "||ton-telegram.network^",
   "||tornadoeth.cash^",
-  "||trezor-help.support^",
   "||trezorsafety.com^",
   "||trezorsuite.at^",
   "||tron-qr-code-generator.com^",
@@ -866,7 +865,6 @@
   "||airdropopensea.vercel.app^",
   "||airdroptracer.com^",
   "||airdropwaletconnect.network^",
-  "||airdropxyzverse.io^",
   "||airguncapital.com^",
   "||airjordan.at^",
   "||airlines-gethuman.org^",
@@ -1876,7 +1874,6 @@
   "||btinternetself.sellfy.store^",
   "||btinternetsell.sellfy.store^",
   "||btmailbt.weebly.com^",
-  "||btvcxvxg.weebly.com^",
   "||bubblemaps.live^",
   "||buddylv.com^",
   "||buemux.com^",
@@ -2001,7 +1998,6 @@
   "||casaleco.com^",
   "||casatua-srl.it^",
   "||cashback-npc.com^",
-  "||cashback-pump.com^",
   "||cashcat-robinhd.xyz^",
   "||cashcatstoken.com^",
   "||cashcatstoken.live^",
@@ -3063,7 +3059,6 @@
   "||dhlgpi.com^",
   "||dhlonboarding.com^",
   "||dhlproductosyservicios.com^",
-  "||dhofareng.com^",
   "||di6y7cb0tkbww.cloudfront.net^",
   "||diaetoxil.de^",
   "||diagnostika.com.ar^",
@@ -3392,7 +3387,6 @@
   "||envelopetrade.net^",
   "||enviro-safe.co^",
   "||enzyme-finance.com^",
-  "||eon.myteammyway.net^",
   "||equilibriumgames.info^",
   "||equiposmedicos.mx^",
   "||erektionspillen.com^",
@@ -3865,7 +3859,6 @@
   "||garagedoorrepairnorthkingstown.com^",
   "||garbeado.click^",
   "||garbersports.com^",
-  "||gardenstokyjp.com^",
   "||gardentoolsaleshop.com^",
   "||gardentoolssale.com^",
   "||garrapucho.es^",
@@ -5000,6 +4993,13 @@
   "||lifeaccessoriessupply.com^",
   "||lifebeautyme.com^",
   "||lifestyle-brands-us.com^",
-  "||lifinity-dex.net^"
+  "||lifinity-dex.net^",
+  "||lighter-airdrop.xyz^",
+  "||lighterbsc.xyz^",
+  "||lighterexchange.app^",
+  "||lighterexchange.fi^",
+  "||lightxcr.com^",
+  "||liitlpepe.com^",
+  "||likecoindao.pages.dev^"
  ]
 }
