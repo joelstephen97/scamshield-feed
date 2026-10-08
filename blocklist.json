@@ -1,5 +1,5 @@
 {
- "version": 20733,
+ "version": 20734,
  "rules": [
   "||ethereum-mixer.io^",
   "||kryptomixer.io^",
@@ -384,6 +384,7 @@
   "||nodegoai.com^",
   "||nodeissuespanel.com^",
   "||nooxnft.app^",
+  "||notifyhubss.net^",
   "||noustestons.antiqueceilings.com^",
   "||noveraxcapital.com^",
   "||nx.tn^",
@@ -597,6 +598,7 @@
   "||123-bti.pages.dev^",
   "||128711coinbase.com^",
   "||13355.vip^",
+  "||135461223.site^",
   "||139150.vip^",
   "||167352-coinbase.com^",
   "||17ty01.com^",
@@ -1801,6 +1803,7 @@
   "||brumatedeutschland.com^",
   "||brusselsarport.be^",
   "||bsbygctheyeji78.w3spaces.com^",
+  "||bsc-base-dt.vercel.app^",
   "||bt-service.plutio.com^",
   "||bt-yaktl.daftpage.com^",
   "||btc-laundry.org^",
@@ -3384,7 +3387,6 @@
   "||facebook-web.com^",
   "||facebook.letsauth.org^",
   "||facebook.meweb.kz^",
-  "||facebookbonus.emmanueldegreatltd.com^",
   "||facebooksecure.social-networking.me^",
   "||facebookshops.best^",
   "||faceitauditv2.com^",
@@ -3949,7 +3951,6 @@
   "||hangmats.com^",
   "||hanna-trachten.de^",
   "||happy.omycdn.ip-ddns.com^",
-  "||hardwarewallete7ledger-live-login-c-three.vercel.app^",
   "||harleydavidsondeutschland.de^",
   "||harmoniouy.com^",
   "||harmonix-fi.pro^",
@@ -4084,6 +4085,7 @@
   "||hper.in^",
   "||hpyerliqxuid-vote.com^",
   "||hqmed.net^",
+  "||hrsyx-fqaaa-aaaag-aavja-cai.raw.ic0.app^",
   "||hrvatskafarmacija.com^",
   "||hscjmexico.org^",
   "||hsfzdozb.buzz^",
@@ -4998,8 +5000,6 @@
   "||lucky-box21.vercel.app^",
   "||lucky-box22.vercel.app^",
   "||lucky-box24.vercel.app^",
-  "||lucky-box25.vercel.app^",
-  "||lucky-giftbox1.vercel.app^",
-  "||lucky-giftbox10.vercel.app^"
+  "||lucky-box25.vercel.app^"
  ]
 }
