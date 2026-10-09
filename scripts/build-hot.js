@@ -38,7 +38,12 @@ function tagRank(tag) { const r = TAG_RANK[tag]; return r == null ? RANK_MAX : r
 // outside the licence-vetted registry.)
 const QUOTA_PCT = { pd: 0.30, mm: 0.10, pdb: 0.10, mf: 0.15, hz: 0.35 };
 
-const HOT_CAP = 20000; const PATH_CAP = 300; const WINDOW_MIN = 48 * 60; const GROWTH_GUARD = 0.25; const TTL_MINUTES = 360;
+const HOT_CAP = 20000; const PATH_CAP = 300; const WINDOW_MIN = 48 * 60; const GROWTH_GUARD = 0.25;
+// Clients read ttlMinutes from hot.json and drop the whole list once it is
+// older than that. GitHub drops scheduled runs (gaps up to 9.4 h observed
+// Sep-Oct 2026), so 6 h expired every client ~8 % of the time. Entries carry
+// their own first-seen t and the 48 h window still bounds them.
+const TTL_MINUTES = 1440;
 // One-off re-baseline (round 5). The shared-hosting gate fix
 // (2026-09-07T18:11Z, run 34150584950) let ~104k previously-gated tenant
 // hosts into `seen` all at once with t = that run, which then outranked the
@@ -230,6 +235,25 @@ function buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now, r
   return { hot, state, rejected, bloom: bloomState, rebaselined };
 }
 
+// Publish tripwire (Step 0, 2026-10-09). A longer TTL means a bad list stays
+// live on clients longer, so refuse to publish one that is obviously wrong:
+// a truncated Tranco allowlist (the per-host gate would let popular sites
+// through), a mega-site anywhere in the list, or more than HOT_CAP entries.
+// Throwing fails the workflow before the push step, so clients keep the last
+// good list.
+const MIN_TRANCO = Math.floor(DEFAULT_TOP_N * 0.9);
+const MEGA_SITES = ['google.com', 'youtube.com', 'facebook.com', 'microsoft.com', 'apple.com', 'amazon.com', 'paypal.com', 'whatsapp.com', 'instagram.com', 'live.com', 'office.com', 'github.com', 'wikipedia.org', 'cloudflare.com'];
+function assertPublishable(hot, trancoSize) {
+  if (!(trancoSize >= MIN_TRANCO)) throw new Error(`[hot] tranco allowlist has ${trancoSize} entries (< ${MIN_TRANCO}) — refusing to publish`);
+  const domains = (hot && hot.domains) || [];
+  if (domains.length > HOT_CAP) throw new Error(`[hot] ${domains.length} domains exceeds cap ${HOT_CAP} — refusing to publish`);
+  for (const d of domains) {
+    const h = String(d.h || '');
+    const m = MEGA_SITES.find((x) => h === x || h.endsWith('.' + x));
+    if (m) throw new Error(`[hot] mega-site ${h} (${m}) in the list — refusing to publish`);
+  }
+}
+
 async function fetchText(url) { const r = await fetch(url, { headers: { 'user-agent': 'scamshield-feed hot builder' } }); if (!r.ok) throw new Error(url + ' -> ' + r.status); return r.text(); }
 function hostsFromList(text) { const out = new Set(); for (const raw of text.split('\n')) { const l = raw.trim(); if (!l || l.startsWith('#') || l.startsWith('!')) continue; const h = normalizeHost(l.replace(/^\|\|/, '').replace(/\^.*$/, '')); if (h) out.add(h); } return out; }
 function pathsFromLinks(text) {
@@ -263,6 +287,7 @@ async function main() {
   const rebaseline = process.argv.includes('--rebaseline') || process.env.HOT_REBASELINE === '1' || process.env.HOT_REBASELINE === 'true';
   if (rebaseline) console.error('[hot] --rebaseline requested');
   const { hot, state, rejected, bloom, rebaselined } = buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now, rebaseline });
+  assertPublishable(hot, tranco.size);
   fs.writeFileSync('hot.json', JSON.stringify(hot));
   fs.writeFileSync(statePath, JSON.stringify(state));
   fs.writeFileSync(bloomPath, bloomLib.serializeBloomFile({ n: bloom.n, mBits: bloom.mBits, k: bloom.k, bits: bloom.bits }));
@@ -271,4 +296,4 @@ async function main() {
   console.log(`[hot] perSource=${JSON.stringify(bySource)}`);
 }
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { buildHot, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, REBASELINE_MIN, BLOOM_CAPACITY, BLOOM_P };
+module.exports = { buildHot, assertPublishable, MIN_TRANCO, TTL_MINUTES, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, REBASELINE_MIN, BLOOM_CAPACITY, BLOOM_P };

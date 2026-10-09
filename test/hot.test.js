@@ -244,3 +244,35 @@ test('buildHot: --rebaseline on a bootstrap run is a no-op (bootstrap already fo
   assert.strictEqual(rebaselined, 0);
   assert.deepStrictEqual(hot.domains, []);
 });
+
+// Step 0 (2026-10-09): clients read ttlMinutes from hot.json; GitHub drops
+// scheduled runs (gaps up to 9.4 h observed), so a 6 h TTL expired the list
+// on every client ~8 % of the time. 24 h covers any realistic gap.
+test('buildHot: emits a 24 h ttl so dropped scheduled runs never expire clients', () => {
+  const { TTL_MINUTES } = require('../scripts/build-hot');
+  assert.strictEqual(TTL_MINUTES, 1440);
+  const { hot } = buildHot({ sources, paths, allow, prevState: { seen: {} }, prevBloom: baselineFixture(), now: NOW });
+  assert.strictEqual(hot.ttlMinutes, 1440);
+});
+
+test('assertPublishable: rejects a truncated Tranco allowlist', () => {
+  const { assertPublishable, MIN_TRANCO } = require('../scripts/build-hot');
+  const hot = { domains: [{ h: 'kit.example' }], paths: [] };
+  assert.throws(() => assertPublishable(hot, MIN_TRANCO - 1), /tranco/i);
+  assert.doesNotThrow(() => assertPublishable(hot, MIN_TRANCO));
+});
+
+test('assertPublishable: a mega-site anywhere in the list aborts the publish', () => {
+  const { assertPublishable, MIN_TRANCO } = require('../scripts/build-hot');
+  for (const h of ['google.com', 'accounts.google.com', 'www.paypal.com', 'microsoft.com']) {
+    assert.throws(() => assertPublishable({ domains: [{ h: 'kit.example' }, { h }], paths: [] }, MIN_TRANCO), /mega/i, h);
+  }
+  // tenants under shared hosting are fine
+  assert.doesNotThrow(() => assertPublishable({ domains: [{ h: 'paypal-login.pages.dev' }], paths: [] }, MIN_TRANCO));
+});
+
+test('assertPublishable: more than HOT_CAP domains aborts', () => {
+  const { assertPublishable, MIN_TRANCO } = require('../scripts/build-hot');
+  const domains = Array.from({ length: HOT_CAP + 1 }, (_, i) => ({ h: `k${i}.example` }));
+  assert.throws(() => assertPublishable({ domains, paths: [] }, MIN_TRANCO), /cap/i);
+});
