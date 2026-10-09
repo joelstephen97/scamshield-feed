@@ -49,6 +49,9 @@ const sources = [
     url: 'https://gitlab.com/phishdestroy/destroylist/-/raw/main/dns/active_domains.txt',
     // 2026-10-09: the GitHub org was deleted (404 since ~2026-10-06); the
     // official GitLab project (PhishDestroy Bot commits, MIT) carries the same file.
+    // Ownership checked 2026-10-09: https://phishdestroy.io/ and /about link only
+    // to gitlab.com/phishdestroy/destroylist. Not pinned to a SHA (live feed);
+    // injection is bounded by the Tranco gate, GROWTH_GUARD and assertPublishable.
     // measured cadence 2026-09-07: ~9 min (dns/active_domains.txt).
     format: 'list',
     offlineFile: 'phishdestroy.txt',
