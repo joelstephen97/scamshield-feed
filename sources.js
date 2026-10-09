@@ -45,8 +45,10 @@ const sources = [
     licenseTier: 'green',
     scoreWeight: 'A',
     license: 'MIT',
-    homepage: 'https://github.com/PhishDestroy/destroylist',
-    url: 'https://raw.githubusercontent.com/phishdestroy/destroylist/main/dns/active_domains.txt',
+    homepage: 'https://gitlab.com/phishdestroy/destroylist',
+    url: 'https://gitlab.com/phishdestroy/destroylist/-/raw/main/dns/active_domains.txt',
+    // 2026-10-09: the GitHub org was deleted (404 since ~2026-10-06); the
+    // official GitLab project (PhishDestroy Bot commits, MIT) carries the same file.
     // measured cadence 2026-09-07: ~9 min (dns/active_domains.txt).
     format: 'list',
     offlineFile: 'phishdestroy.txt',

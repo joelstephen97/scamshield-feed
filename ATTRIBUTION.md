@@ -12,7 +12,7 @@ substance (only normalized: lowercased, punycoded, scheme/path/port stripped
 | Source | License | Score weight | Homepage |
 |---|---|---|---|
 | Phishing.Database | MIT | Tier-1 (A) | https://github.com/Phishing-Database/Phishing.Database |
-| PhishDestroy destroylist | MIT | Tier-1 (A) | https://github.com/PhishDestroy/destroylist |
+| PhishDestroy destroylist | MIT | Tier-1 (A) | https://gitlab.com/phishdestroy/destroylist |
 | polkadot-js/phishing | Apache-2.0 | Tier-1 (A) | https://github.com/polkadot-js/phishing |
 | MetaMask eth-phishing-detect | DBAD-1.2 (data reused, no code) | Tier-1 (A) | https://github.com/MetaMask/eth-phishing-detect |
 | The Block List Project (phishing.txt) | Unlicense | Tier-2 (B — moderate quality) | https://github.com/blocklistproject/Lists |
