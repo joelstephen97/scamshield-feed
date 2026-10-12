@@ -1,5 +1,5 @@
 {
- "version": 20737,
+ "version": 20738,
  "rules": [
   "||ethereum-mixer.io^",
   "||kryptomixer.io^",
@@ -90,7 +90,6 @@
   "||apygatercptools.web.app^",
   "||apygaters.firebaseapp.com^",
   "||argoswap.io^",
-  "||asesoriabarrachina.es^",
   "||assets.devdesenvolvimento.com.br^",
   "||ateradata.com^",
   "||aterapanel.com^",
@@ -1451,6 +1450,7 @@
   "||arzi.de^",
   "||ascendlaunch.app^",
   "||asercomsa.com^",
+  "||asesoriabarrachina.es^",
   "||ashkar2023.github.io^",
   "||ashutoshhospital.com^",
   "||asiabizconsult.com^",
@@ -2939,7 +2939,6 @@
   "||curiosi.shop^",
   "||currentiyattyahoocom.boxmode.io^",
   "||currentleaderboardlist-on.netlify.app^",
-  "||currently-104118.square.site^",
   "||currently-att.boxmode.io^",
   "||currentlyatt551.weebly.com^",
   "||currentlyattyahoologinservice.boxmode.io^",
@@ -3296,7 +3295,6 @@
   "||digital-arcnetwork.com^",
   "||digitalconcept.pro^",
   "||digitaler-fitness-check.de^",
-  "||dikmentekstil.com^",
   "||diniance.art^",
   "||dinochange.com^",
   "||dionehub.pages.dev^",
@@ -3358,7 +3356,6 @@
   "||docs-google.com^",
   "||docs.revv.so^",
   "||doctolib-aides.com^",
-  "||docu-share-direct-lnk-5378edjksjhdb.vercel.app^",
   "||documentarp.com^",
   "||docusine.com^",
   "||doecex.com^",
@@ -4069,7 +4066,6 @@
   "||freiwing.de^",
   "||freizeitjackensalesshop.com^",
   "||friboo-prada.com^",
-  "||fricktransfer.com^",
   "||friluftsbillig.com^",
   "||friluftsshopde.com^",
   "||friluftsverkauf.com^",
@@ -4856,7 +4852,6 @@
   "||jaovex.com^",
   "||japaneseswordmuseumthailand.com^",
   "||jason-coinbase.com^",
-  "||jaytechomes.com^",
   "||jb.com.vn^",
   "||jcy100.com^",
   "||jeambeam24.github.io^",
@@ -5000,6 +4995,11 @@
   "||keensalmon.org^",
   "||keenschuhe.at^",
   "||keepass.it^",
-  "||keepers-ledger.com^"
+  "||keepers-ledger.com^",
+  "||keeta-votes.com^",
+  "||keeta.space^",
+  "||keeta.web.id^",
+  "||keisukeinu.finance^",
+  "||kelansu.com^"
  ]
 }
