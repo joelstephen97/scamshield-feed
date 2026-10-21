@@ -1,27 +1,27 @@
 {
- "version": "2026102021",
- "generatedAt": "2026-10-20T21:01:26.286Z",
+ "version": "2026102102",
+ "generatedAt": "2026-10-21T02:24:39.295Z",
  "counts": {
-  "block": 635967,
-  "warn": 1719455,
-  "total": 2355427
+  "block": 636244,
+  "warn": 1719393,
+  "total": 2355642
  },
  "sha256": {
-  "set40": "c1631d79e98671e67ad2e5da99f6bbb33a650ed34157fe074b0def26918fe704",
-  "warn40": "845f93a5c79afc6c0ddab74d0a02cc515e235048c9f0012fe3545e40a29ee0b5",
-  "deltaFromPrev": "7019da23323bdfd7b1e55cdcdb0086da97fdfd1c4a13598888c7c7e5e9f22abe"
+  "set40": "e2cd5e4a5a8fadc9996fbe0a883f56b7ffa440ad3092155850e104882254813c",
+  "warn40": "32940d843f7f7ed1011aa63c91b39f4acc0e146bb06bbfc5176fbaf07eebdf6e",
+  "deltaFromPrev": "b25cbbf793259ba0debe35c6ec6102578ccb2f547818297fe358f614a446a202"
  },
- "prev": "2026102015",
+ "prev": "2026102021",
  "urls": {
-  "cdn": "https://cdn.jsdelivr.net/gh/joelstephen97/scamshield-feed@v2026102021/v/current/",
+  "cdn": "https://cdn.jsdelivr.net/gh/joelstephen97/scamshield-feed@v2026102102/v/current/",
   "fallback": "https://raw.githubusercontent.com/joelstephen97/scamshield-feed/main/v/current/"
  },
  "ttlHours": 6,
  "nrd": {
   "file": "nrd.bloom",
-  "sha256": "16ec4b4f02bde2834be824cde9a3e5a8139d52263c8e21f3e90df303a444eec0",
-  "n": 6241841,
-  "mBits": 68833488,
+  "sha256": "daf2c9eb3b6915337bbfe3aa5519500fe7f116d3632101c9e1a5b899cabda38f",
+  "n": 6241838,
+  "mBits": 68833456,
   "k": 7,
   "windowDays": 14
  }
