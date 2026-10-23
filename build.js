@@ -34,7 +34,7 @@ const {
   parseMetamaskConfig, parsePolkadotAllDeny,
 } = require('./lib/parsers');
 const { fetchTrancoTop, parseTrancoCsv, DEFAULT_TOP_N } = require('./lib/tranco');
-const { buildAllowlist, isAllowed } = require('./lib/gate');
+const { buildAllowlist, isAllowed, dropPopular } = require('./lib/gate');
 const { scoreDomains } = require('./lib/score');
 const { buildLegacyBlocklist } = require('./lib/legacy');
 const {
@@ -286,6 +286,13 @@ async function runBuild(opts = {}) {
 
   // --- SCORE ---
   const scored = scoreDomains(gatedPerSourceSets, sourceMetaByKey);
+  // Popular-site tripwire (0.15.0): a last, independent check that no Tranco
+  // top-100k host reached the published union. Drops and counts, never throws
+  // (this build runs unattended; one bad upstream entry must not stop it).
+  const { dropped: popularDropped } = dropPopular([...scored.keys()], tranco);
+  for (const h of popularDropped) scored.delete(h);
+  stats.popularDropped = popularDropped.length;
+  if (popularDropped.length) console.warn(`[build] tripwire: dropped ${popularDropped.length} popular host(s): ${popularDropped.slice(0, 20).join(', ')}`);
   let blockCount = 0;
   let warnCount = 0;
   for (const entry of scored.values()) {

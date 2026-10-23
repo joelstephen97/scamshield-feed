@@ -6,7 +6,7 @@
 const fs = require('fs'); const path = require('path');
 const { sources, handBrandList } = require('../sources');
 const { normalizeHost } = require('../lib/normalize');
-const { buildAllowlist, isAllowed } = require('../lib/gate');
+const { buildAllowlist, isAllowed, dropPopular } = require('../lib/gate');
 const { fetchTrancoTop, DEFAULT_TOP_N } = require('../lib/tranco');
 const bloomLib = require('../lib/bloom');
 
@@ -254,6 +254,20 @@ function assertPublishable(hot, trancoSize) {
   }
 }
 
+// Drops (never throws on) any domain entry that is a Tranco top-100k host, in
+// place, and logs the count (0.15.0). Runs before assertPublishable so one bad
+// upstream line cannot stop the hourly hot list. Paths are exempt: their host
+// is deliberately popular (SHARED_PATH_HOSTS). Returns the dropped hosts.
+function dropPopularFromHot(hot, tranco, log = console.error) {
+  const domains = (hot && hot.domains) || [];
+  const { kept, dropped } = dropPopular(domains.map((d) => String(d.h || '')), tranco);
+  if (!dropped.length) return [];
+  const keep = new Set(kept);
+  hot.domains = domains.filter((d) => keep.has(String(d.h || '')));
+  log(`[hot] tripwire: dropped ${dropped.length} popular host(s): ${dropped.slice(0, 20).join(', ')}`);
+  return dropped;
+}
+
 async function fetchText(url) { const r = await fetch(url, { headers: { 'user-agent': 'scamshield-feed hot builder' } }); if (!r.ok) throw new Error(url + ' -> ' + r.status); return r.text(); }
 function hostsFromList(text) { const out = new Set(); for (const raw of text.split('\n')) { const l = raw.trim(); if (!l || l.startsWith('#') || l.startsWith('!')) continue; const h = normalizeHost(l.replace(/^\|\|/, '').replace(/\^.*$/, '')); if (h) out.add(h); } return out; }
 function pathsFromLinks(text) {
@@ -287,6 +301,7 @@ async function main() {
   const rebaseline = process.argv.includes('--rebaseline') || process.env.HOT_REBASELINE === '1' || process.env.HOT_REBASELINE === 'true';
   if (rebaseline) console.error('[hot] --rebaseline requested');
   const { hot, state, rejected, bloom, rebaselined } = buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now, rebaseline });
+  dropPopularFromHot(hot, tranco);
   assertPublishable(hot, tranco.size);
   fs.writeFileSync('hot.json', JSON.stringify(hot));
   fs.writeFileSync(statePath, JSON.stringify(state));
@@ -296,4 +311,4 @@ async function main() {
   console.log(`[hot] perSource=${JSON.stringify(bySource)}`);
 }
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { buildHot, assertPublishable, MIN_TRANCO, TTL_MINUTES, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, REBASELINE_MIN, BLOOM_CAPACITY, BLOOM_P };
+module.exports = { buildHot, assertPublishable, dropPopularFromHot, MIN_TRANCO, TTL_MINUTES, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, REBASELINE_MIN, BLOOM_CAPACITY, BLOOM_P };

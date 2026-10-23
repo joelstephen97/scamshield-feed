@@ -276,3 +276,35 @@ test('assertPublishable: more than HOT_CAP domains aborts', () => {
   const domains = Array.from({ length: HOT_CAP + 1 }, (_, i) => ({ h: `k${i}.example` }));
   assert.throws(() => assertPublishable({ domains, paths: [] }, MIN_TRANCO), /cap/i);
 });
+
+// Popular-site tripwire (0.15.0): a Tranco top-100k host must never reach the
+// published feed. The hourly cron must DROP such an entry and carry on, never
+// throw, so one bad upstream line cannot stop the hot list.
+test('dropPopular: removes Tranco hosts (and their subdomains), keeps tenants of platforms', () => {
+  const { dropPopular } = require('../lib/gate');
+  const tranco = new Set(['framer.website', 'google.com', 'pages.dev']);
+  const { kept, dropped } = dropPopular(['kit.example', 'google.com', 'accounts.google.com', 'framer.website', 'evil.pages.dev'], tranco);
+  assert.deepStrictEqual(dropped.sort(), ['accounts.google.com', 'framer.website', 'google.com']);
+  assert.deepStrictEqual(kept, ['kit.example', 'evil.pages.dev']);
+});
+
+test('dropPopularFromHot: drops a popular entry, counts it, and the build still produces output', () => {
+  const { dropPopularFromHot, assertPublishable, MIN_TRANCO } = require('../scripts/build-hot');
+  const tranco = new Set(['framer.website', 'example-popular.com']);
+  const hot = { v: 1, domains: [{ h: 'kit.example' }, { h: 'framer.website' }, { h: 'www.example-popular.com' }], paths: [{ h: 'rb.gy', p: '/x' }] };
+  const logs = [];
+  let dropped;
+  assert.doesNotThrow(() => { dropped = dropPopularFromHot(hot, tranco, (m) => logs.push(m)); });
+  assert.deepStrictEqual(dropped.sort(), ['framer.website', 'www.example-popular.com']);
+  assert.deepStrictEqual(hot.domains.map((d) => d.h), ['kit.example']);
+  assert.strictEqual(hot.paths.length, 1);
+  assert.ok(logs.some((m) => /dropped 2/.test(m)));
+  assert.doesNotThrow(() => assertPublishable(hot, MIN_TRANCO));
+});
+
+test('dropPopularFromHot: a clean list is untouched', () => {
+  const { dropPopularFromHot } = require('../scripts/build-hot');
+  const hot = { domains: [{ h: 'kit.example' }], paths: [] };
+  assert.deepStrictEqual(dropPopularFromHot(hot, new Set(['google.com']), () => {}), []);
+  assert.strictEqual(hot.domains.length, 1);
+});

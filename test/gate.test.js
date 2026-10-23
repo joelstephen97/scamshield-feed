@@ -58,3 +58,8 @@ test('SHARED_HOST_APEXES covers the tenant platforms that dominate hosted phishi
     assert.equal(isAllowed('kit.' + apex, new Set([apex])), false);
   }
 });
+
+test('dropPopular is exported and splits kept from dropped without throwing (0.15.0)', () => {
+  const { dropPopular } = require('../lib/gate');
+  assert.deepStrictEqual(dropPopular(['a.example', 'google.com'], new Set(['google.com'])), { kept: ['a.example'], dropped: ['google.com'] });
+});
