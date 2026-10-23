@@ -254,14 +254,20 @@ function assertPublishable(hot, trancoSize) {
   }
 }
 
-// Drops (never throws on) any domain entry that is a Tranco top-100k host, in
-// place, and logs the count (0.15.0). Runs before assertPublishable so one bad
-// upstream line cannot stop the hourly hot list. Paths are exempt: their host
+// Drops any domain entry that is a Tranco top-100k host, in place, and logs it
+// (0.15.0), so one stray upstream line cannot stop the hourly hot list. It
+// throws only for a MEGA_SITES host or more than MAX_POPULAR_DROPS drops. Paths are exempt: their host
 // is deliberately popular (SHARED_PATH_HOSTS). Returns the dropped hosts.
+const MAX_POPULAR_DROPS = 25;
 function dropPopularFromHot(hot, tranco, log = console.error) {
   const domains = (hot && hot.domains) || [];
   const { kept, dropped } = dropPopular(domains.map((d) => String(d.h || '')), tranco);
   if (!dropped.length) return [];
+  // A mega-site, or a flood of popular hosts, means the upstream or the gate is
+  // broken rather than one stray line: abort and keep the last good list.
+  const mega = dropped.find((h) => MEGA_SITES.some((x) => h === x || h.endsWith('.' + x)));
+  if (mega) throw new Error(`[hot] mega-site ${mega} in the list — refusing to publish`);
+  if (dropped.length > MAX_POPULAR_DROPS) throw new Error(`[hot] ${dropped.length} popular hosts dropped (> ${MAX_POPULAR_DROPS}) — refusing to publish`);
   const keep = new Set(kept);
   hot.domains = domains.filter((d) => keep.has(String(d.h || '')));
   log(`[hot] tripwire: dropped ${dropped.length} popular host(s): ${dropped.slice(0, 20).join(', ')}`);
@@ -311,4 +317,4 @@ async function main() {
   console.log(`[hot] perSource=${JSON.stringify(bySource)}`);
 }
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { buildHot, assertPublishable, dropPopularFromHot, MIN_TRANCO, TTL_MINUTES, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, REBASELINE_MIN, BLOOM_CAPACITY, BLOOM_P };
+module.exports = { buildHot, assertPublishable, dropPopularFromHot, MAX_POPULAR_DROPS, MIN_TRANCO, TTL_MINUTES, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, REBASELINE_MIN, BLOOM_CAPACITY, BLOOM_P };

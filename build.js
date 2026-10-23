@@ -292,6 +292,7 @@ async function runBuild(opts = {}) {
   const { dropped: popularDropped } = dropPopular([...scored.keys()], tranco);
   for (const h of popularDropped) scored.delete(h);
   stats.popularDropped = popularDropped.length;
+  if (popularDropped.length > 25) console.warn(`[build] WARNING: tripwire dropped ${popularDropped.length} popular hosts (> 25): upstream or the gate may be broken`);
   if (popularDropped.length) console.warn(`[build] tripwire: dropped ${popularDropped.length} popular host(s): ${popularDropped.slice(0, 20).join(', ')}`);
   let blockCount = 0;
   let warnCount = 0;

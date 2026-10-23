@@ -302,6 +302,16 @@ test('dropPopularFromHot: drops a popular entry, counts it, and the build still 
   assert.doesNotThrow(() => assertPublishable(hot, MIN_TRANCO));
 });
 
+test('dropPopularFromHot: a mega-site aborts; more than 25 popular drops abort; one drop passes', () => {
+  const { dropPopularFromHot } = require('../scripts/build-hot');
+  assert.throws(() => dropPopularFromHot({ domains: [{ h: 'kit.example' }, { h: 'accounts.google.com' }] }, new Set(['google.com']), () => {}), /mega/i);
+  const many = Array.from({ length: 26 }, (_, i) => `pop${i}.com`);
+  assert.throws(() => dropPopularFromHot({ domains: many.map((h) => ({ h })) }, new Set(many), () => {}), /26 popular/);
+  const hot = { domains: [{ h: 'pop0.com' }, { h: 'kit.example' }] };
+  assert.deepStrictEqual(dropPopularFromHot(hot, new Set(['pop0.com']), () => {}), ['pop0.com']);
+  assert.deepStrictEqual(hot.domains, [{ h: 'kit.example' }]);
+});
+
 test('dropPopularFromHot: a clean list is untouched', () => {
   const { dropPopularFromHot } = require('../scripts/build-hot');
   const hot = { domains: [{ h: 'kit.example' }], paths: [] };
