@@ -57,3 +57,11 @@ test('topSlice keeps rank order and size', () => {
   assert.deepEqual([...topSlice(s, 2)], ['a', 'b']);
   assert.equal(topSlice(s, 10), s);
 });
+
+test('dropExcluded folds only a literal "www." prefix: lookalikes such as wwwxlifeatspotify.com stay listed', () => {
+  const { dropExcluded } = require('../lib/gate');
+  const ex = new Set(['lifeatspotify.com']);
+  const r = dropExcluded(['lifeatspotify.com', 'www.lifeatspotify.com', 'wwwxlifeatspotify.com', 'www-lifeatspotify.com', 'evil.lifeatspotify.com'], ex);
+  assert.deepStrictEqual(r.dropped, ['lifeatspotify.com', 'www.lifeatspotify.com']);
+  assert.deepStrictEqual(r.kept, ['wwwxlifeatspotify.com', 'www-lifeatspotify.com', 'evil.lifeatspotify.com']);
+});
