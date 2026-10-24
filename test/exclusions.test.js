@@ -65,3 +65,15 @@ test('dropExcluded folds only a literal "www." prefix: lookalikes such as wwwxli
   assert.deepStrictEqual(r.dropped, ['lifeatspotify.com', 'www.lifeatspotify.com']);
   assert.deepStrictEqual(r.kept, ['wwwxlifeatspotify.com', 'www-lifeatspotify.com', 'evil.lifeatspotify.com']);
 });
+
+test('dropUncorroborated keeps a single-source host on a strongly abused TLD (.sbs) but drops one on .com or .info', () => {
+  const scored = new Map([
+    ['3xp3cts1aim.sbs', { sources: new Set(['phishing-database']), tier: 'block' }],
+    ['legit-ranked.com', { sources: new Set(['phishing-database']), tier: 'block' }],
+    ['legit-ranked.info', { sources: new Set(['phishing-database']), tier: 'block' }]
+  ]);
+  const wide = new Set(['3xp3cts1aim.sbs', 'legit-ranked.com', 'legit-ranked.info']);
+  const dropped = dropUncorroborated(scored, wide);
+  assert.deepStrictEqual(dropped.sort(), ['legit-ranked.com', 'legit-ranked.info']);
+  assert.ok(scored.has('3xp3cts1aim.sbs'));
+});
