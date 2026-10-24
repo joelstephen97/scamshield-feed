@@ -1,0 +1,174 @@
+# Confirmed-legitimate domains that upstream blocklists wrongly list (2026-10-23 audit).
+# One registrable domain per line; a host equal to or under an entry is never published
+# in the block/warn/hot/NRD outputs. Format: domain  # Tranco rank, upstream source(s).
+# Add a line here (with evidence) to fix a reported false positive at the feed source.
+ayondo.com  # 101323, jarelllama/Scam-Blocklist
+parspack.com  # 101397, jarelllama/Scam-Blocklist
+anbernic.com  # 102305, jarelllama/Scam-Blocklist
+ono.ac.il  # 102445, The Block List Project (phishing.txt)
+bithomp.com  # 103628, PhishDestroy destroylist
+btc.com  # 103728, jarelllama/Scam-Blocklist
+jigzone.com  # 105633, The Block List Project (phishing.txt)
+mpago.la  # 108121, Phishing.Database
+flash.cn  # 114944, HaGeZi Threat-Intelligence-Feeds (medium)
+kiwibox.com  # 115435, The Block List Project (phishing.txt)
+investnews.com.br  # 116069, Phishing.Database
+stylewe.com  # 117373, jarelllama/Scam-Blocklist
+bise-ctg.gov.bd  # 117902, The Block List Project (phishing.txt)
+yobit.net  # 120243, jarelllama/Scam-Blocklist
+comptoirdescotonniers.com  # 120827, jarelllama/Scam-Blocklist
+mr2.com  # 121027, The Block List Project (phishing.txt)
+coins.ph  # 121615, jarelllama/Scam-Blocklist
+zip.net  # 122497, The Block List Project (phishing.txt)
+canarytokens.com  # 122605, Phishing.Database
+bitget.org  # 123204, jarelllama/Scam-Blocklist
+billboard-live.com  # 123522, ScamSniffer scam-database
+targetoptical.com  # 123982, ScamSniffer scam-database
+wakeworld.com  # 128463, The Block List Project (phishing.txt)
+freddys.com  # 129086, PhishDestroy destroylist
+jooust.ac.ke  # 131015, The Block List Project (phishing.txt)
+microsoft.design  # 131867, Phishing.Database
+speediance.com  # 132566, jarelllama/Scam-Blocklist
+picclick.com.au  # 132647, Phishing.Database
+nibe.eu  # 133549, Phishing.Database
+gp.org  # 137560, The Block List Project (phishing.txt)
+poolin.com  # 139755, jarelllama/Scam-Blocklist
+tokocrypto.com  # 141585, jarelllama/Scam-Blocklist
+123contactform.com  # 142275, The Block List Project (phishing.txt)
+privatesportshop.fr  # 143012, jarelllama/Scam-Blocklist
+triple-a.io  # 145022, jarelllama/Scam-Blocklist
+frontsteps.com  # 146881, PhishDestroy destroylist
+zalando-lounge.it  # 149793, HaGeZi Threat-Intelligence-Feeds (medium)
+babolat.com  # 151973, jarelllama/Scam-Blocklist
+own3d.tv  # 152878, durablenapkin/scamblocklist
+kenanaonline.com  # 156975, Phishing.Database
+lifeatspotify.com  # 159331, Phishing.Database
+beauteprivee.fr  # 161488, jarelllama/Scam-Blocklist
+indigocard.com  # 164312, jarelllama/Scam-Blocklist
+president.ac.id  # 164526, The Block List Project (phishing.txt)
+mmarau.ac.ke  # 166439, Phishing.Database+The Block List Project (phishing.txt)
+mercadolibre.com.bo  # 173451, Phishing.Database
+bobmarley.com  # 176311, ScamSniffer scam-database
+minia.edu.eg  # 177085, The Block List Project (phishing.txt)
+garlic.com  # 179944, The Block List Project (phishing.txt)
+libertex.com  # 182939, jarelllama/Scam-Blocklist
+modpizza.com  # 183371, PhishDestroy destroylist
+mmu.ac.ke  # 185133, The Block List Project (phishing.txt)
+manduka.com  # 190140, jarelllama/Scam-Blocklist
+ebible.com  # 193260, Phishing.Database
+formcrafts.com  # 197076, The Block List Project (phishing.txt)
+cfi.net.cn  # 198580, Phishing.Database
+mintscan.io  # 198654, PhishDestroy destroylist
+dasparking.de  # 202183, Phishing.Database
+anchorage.com  # 202662, PhishDestroy destroylist
+jscimedcentral.com  # 205624, Phishing.Database
+enigmasoftware.com  # 219885, jarelllama/Scam-Blocklist
+urldefense.us  # 221273, ScamSniffer scam-database
+musical-artifacts.com  # 225104, ScamSniffer scam-database
+biconomy.com  # 225243, jarelllama/Scam-Blocklist
+her2support.org  # 226392, Phishing.Database
+dansdata.com  # 240248, Phishing.Database
+future-processing.com  # 245823, ScamSniffer scam-database
+planful.com  # 251134, ScamSniffer scam-database
+hitchcock.org  # 251154, jarelllama/Scam-Blocklist
+moh.gov.zm  # 252166, The Block List Project (phishing.txt)
+clavijero.edu.mx  # 257909, The Block List Project (phishing.txt)
+cartoonresearch.com  # 257922, Phishing.Database
+cu.ac.bd  # 260119, The Block List Project (phishing.txt)
+2m.ma  # 260137, Phishing.Database
+lahsa.org  # 261645, The Block List Project (phishing.txt)
+sideshift.app  # 262364, PhishDestroy destroylist
+cbic.org.br  # 263369, Phishing.Database
+trendsi.com  # 270273, jarelllama/Scam-Blocklist
+schoeffel.com  # 272072, jarelllama/Scam-Blocklist
+vgmusic.com  # 274381, The Block List Project (phishing.txt)
+iaincurup.ac.id  # 276475, ScamSniffer scam-database
+clinicalofficerscouncil.org  # 278048, Phishing.Database
+zulutrade.com  # 282426, jarelllama/Scam-Blocklist
+cogebanque.co.rw  # 291064, Phishing.Database
+kontactr.com  # 296557, Phishing.Database
+chasseurdefrance.com  # 299243, Phishing.Database
+wellborn.com  # 316145, The Block List Project (phishing.txt)
+rjt.ac.lk  # 325165, The Block List Project (phishing.txt)
+nspaz.edu.pe  # 326972, Phishing.Database
+stormgain.com  # 328097, jarelllama/Scam-Blocklist
+hashmuseum.com  # 339665, Phishing.Database
+quantium.rs  # 343788, PhishDestroy destroylist
+moodle.academy  # 344593, ScamSniffer scam-database
+kyu.ac.ke  # 346749, The Block List Project (phishing.txt)
+mtgassist.com  # 347513, Phishing.Database
+egale.ca  # 347750, Phishing.Database
+ubp.com  # 351316, ScamSniffer scam-database
+farmaciasloshidalgos.com.do  # 358440, Phishing.Database
+pip-semarang.ac.id  # 362962, The Block List Project (phishing.txt)
+kycaid.com  # 364065, PhishDestroy destroylist
+pyodide.org  # 366358, HaGeZi Threat-Intelligence-Feeds (medium)
+unmuha.ac.id  # 366626, jarelllama/Scam-Blocklist
+flatpress.org  # 387696, The Block List Project (phishing.txt)
+kisiipoly.ac.ke  # 398798, Phishing.Database
+mopa.gov.bd  # 404660, The Block List Project (phishing.txt)
+nova.ie  # 409606, Phishing.Database
+luwutimurkab.go.id  # 417305, The Block List Project (phishing.txt)
+keap.page  # 421045, jarelllama/Scam-Blocklist
+symbiosis.finance  # 422975, GlobalAntiScamOrg-blocklist
+brillenland.de  # 442770, Phishing.Database
+bitshares.org  # 443697, ScamSniffer scam-database
+africanstudies.org  # 446107, Phishing.Database
+anpad.org.br  # 447768, Phishing.Database
+hospitalpitalito.gov.co  # 462408, The Block List Project (phishing.txt)
+agriculture.go.ug  # 488464, Phishing.Database
+aliah.ac.in  # 507889, Phishing.Database
+bgb.gov.bd  # 514841, The Block List Project (phishing.txt)
+atbu.edu.ng  # 516967, Phishing.Database
+kotawaringinbaratkab.go.id  # 520174, Phishing.Database
+ironmongeryexperts.co.uk  # 554312, Phishing.Database
+opengenus.org  # 555439, jarelllama/Scam-Blocklist
+its.edu.in  # 557621, Phishing.Database
+aauekpoma.edu.ng  # 558495, ScamSniffer scam-database
+onramp.money  # 562826, GlobalAntiScamOrg-blocklist
+pratham.org  # 563395, Phishing.Database
+pdf.org  # 578940, The Block List Project (phishing.txt)
+smkbpn.sch.id  # 584339, jarelllama/Scam-Blocklist
+fsdafrica.org  # 596804, The Block List Project (phishing.txt)
+tafe.com  # 598145, The Block List Project (phishing.txt)
+trumpia.com  # 606548, The Block List Project (phishing.txt)
+ferdium.pro  # 607765, MetaMask eth-phishing-detect (blacklist)
+imediaethics.org  # 610533, Phishing.Database
+sparkasse-bayreuth.de  # 629568, PhishDestroy destroylist
+claritycrm.com  # 637072, Phishing.Database
+polarpro.com  # 646699, ScamSniffer scam-database
+taxpolicy.org.uk  # 648486, jarelllama/Scam-Blocklist
+mamujutengahkab.go.id  # 649642, The Block List Project (phishing.txt)
+abraji.org.br  # 650639, The Block List Project (phishing.txt)
+banwo-ighodalo.com  # 652364, Phishing.Database
+dodgersdigest.com  # 656915, Phishing.Database
+ferdium.app  # 664231, MetaMask eth-phishing-detect (blacklist)
+psdf.org.pk  # 675085, The Block List Project (phishing.txt)
+exploreembedded.com  # 679050, Phishing.Database
+facets.org  # 699551, Phishing.Database
+sinequa.com  # 702687, jarelllama/Scam-Blocklist
+mimikakab.go.id  # 710436, HaGeZi Threat-Intelligence-Feeds (medium)
+micropoll.com  # 710946, The Block List Project (phishing.txt)
+jabu.edu.ng  # 723214, Phishing.Database
+cbit.ac.in  # 725103, The Block List Project (phishing.txt)
+moneybarn.com  # 729851, The Block List Project (phishing.txt)
+ninewest.com.tr  # 736489, jarelllama/Scam-Blocklist
+santanderprivate.co.uk  # 751084, jarelllama/Scam-Blocklist
+amrapali.ac.in  # 762523, Phishing.Database
+crocs.hr  # 776486, jarelllama/Scam-Blocklist
+hgu.ac.in  # 792604, Phishing.Database
+irembo.com  # 796609, jarelllama/Scam-Blocklist
+jntuhceh.ac.in  # 798507, The Block List Project (phishing.txt)
+lotecruz.org.co  # 805442, Phishing.Database
+npt-2.go.th  # 815563, Phishing.Database
+nse.org.ng  # 815609, The Block List Project (phishing.txt)
+uu.edu.et  # 843354, Phishing.Database
+wbsu.ac.in  # 846400, jarelllama/Scam-Blocklist
+ijrte.org  # 890734, The Block List Project (phishing.txt)
+coker.edu  # 911294, ScamSniffer scam-database
+aaets.org  # 913314, The Block List Project (phishing.txt)
+bestdoctors.com  # 913949, Phishing.Database
+cepa.gob.sv  # 941747, Phishing.Database
+itau.com.ar  # 960459, The Block List Project (phishing.txt)
+velodrome.finance  # 968170, ScamSniffer scam-database
+crocs.bg  # 989065, jarelllama/Scam-Blocklist

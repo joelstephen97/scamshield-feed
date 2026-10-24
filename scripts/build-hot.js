@@ -6,7 +6,8 @@
 const fs = require('fs'); const path = require('path');
 const { sources, handBrandList } = require('../sources');
 const { normalizeHost } = require('../lib/normalize');
-const { buildAllowlist, isAllowed, dropPopular } = require('../lib/gate');
+const { buildAllowlist, isAllowed, dropPopular, dropExcluded } = require('../lib/gate');
+const { loadExclusions } = require('../lib/exclusions');
 const { fetchTrancoTop, DEFAULT_TOP_N } = require('../lib/tranco');
 const bloomLib = require('../lib/bloom');
 
@@ -274,6 +275,17 @@ function dropPopularFromHot(hot, tranco, log = console.error) {
   return dropped;
 }
 
+// Exact-host removal of data/exclusions.txt entries from the hot list.
+function dropExcludedFromHot(hot, exclusions, log = console.error) {
+  const domains = (hot && hot.domains) || [];
+  const { dropped } = dropExcluded(domains.map((d) => String(d.h || '')), exclusions);
+  if (!dropped.length) return [];
+  const gone = new Set(dropped);
+  hot.domains = domains.filter((d) => !gone.has(String(d.h || '')));
+  log(`[hot] exclusions: dropped ${dropped.length} host(s): ${dropped.slice(0, 20).join(', ')}`);
+  return dropped;
+}
+
 async function fetchText(url) { const r = await fetch(url, { headers: { 'user-agent': 'scamshield-feed hot builder' } }); if (!r.ok) throw new Error(url + ' -> ' + r.status); return r.text(); }
 function hostsFromList(text) { const out = new Set(); for (const raw of text.split('\n')) { const l = raw.trim(); if (!l || l.startsWith('#') || l.startsWith('!')) continue; const h = normalizeHost(l.replace(/^\|\|/, '').replace(/\^.*$/, '')); if (h) out.add(h); } return out; }
 function pathsFromLinks(text) {
@@ -296,6 +308,7 @@ async function main() {
   let paths = []; try { paths = pathsFromLinks(await fetchText(PDB_LINKS)); } catch (e) { console.error('[hot] links failed: ' + e.message); }
   const tranco = await fetchTrancoTop(DEFAULT_TOP_N);
   const allow = buildAllowlist({ tranco, metamaskWhitelist: [], handBrandList });
+  const exclusions = loadExclusions();
   const statePath = path.resolve('hot-state.json');
   const bloomPath = path.resolve('hot-baseline.bloom');
   const prevState = fs.existsSync(statePath) ? JSON.parse(fs.readFileSync(statePath, 'utf8')) : { seen: {}, absent: {}, counts: {}, tags: {} };
@@ -307,6 +320,7 @@ async function main() {
   const rebaseline = process.argv.includes('--rebaseline') || process.env.HOT_REBASELINE === '1' || process.env.HOT_REBASELINE === 'true';
   if (rebaseline) console.error('[hot] --rebaseline requested');
   const { hot, state, rejected, bloom, rebaselined } = buildHot({ sources: srcSets, paths, allow, prevState, prevBloom, now, rebaseline });
+  dropExcludedFromHot(hot, exclusions);
   dropPopularFromHot(hot, tranco);
   assertPublishable(hot, tranco.size);
   fs.writeFileSync('hot.json', JSON.stringify(hot));
@@ -317,4 +331,4 @@ async function main() {
   console.log(`[hot] perSource=${JSON.stringify(bySource)}`);
 }
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { buildHot, assertPublishable, dropPopularFromHot, MAX_POPULAR_DROPS, MIN_TRANCO, TTL_MINUTES, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, REBASELINE_MIN, BLOOM_CAPACITY, BLOOM_P };
+module.exports = { buildHot, assertPublishable, dropPopularFromHot, dropExcludedFromHot, MAX_POPULAR_DROPS, MIN_TRANCO, TTL_MINUTES, applyQuotas, HOT_CAP, PATH_CAP, WINDOW_MIN, HOT_SOURCE_KEYS, TAG_RANK, QUOTA_PCT, REBASELINE_MIN, BLOOM_CAPACITY, BLOOM_P };

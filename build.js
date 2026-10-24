@@ -33,8 +33,9 @@ const {
   parseList, parseHosts, parseAdblock, parseJsonArray,
   parseMetamaskConfig, parsePolkadotAllDeny,
 } = require('./lib/parsers');
-const { fetchTrancoTop, parseTrancoCsv, DEFAULT_TOP_N } = require('./lib/tranco');
-const { buildAllowlist, isAllowed, dropPopular } = require('./lib/gate');
+const { fetchTrancoTop, parseTrancoCsv, topSlice, DEFAULT_TOP_N, WIDE_TOP_N } = require('./lib/tranco');
+const { loadExclusions } = require('./lib/exclusions');
+const { buildAllowlist, isAllowed, dropPopular, dropExcluded, dropUncorroborated } = require('./lib/gate');
 const { scoreDomains } = require('./lib/score');
 const { buildLegacyBlocklist } = require('./lib/legacy');
 const {
@@ -242,13 +243,18 @@ async function runBuild(opts = {}) {
   const stats = { sources: [], riskSources: [], nrdSources: [], gateRemovals: 0, tierSplit: {}, unionSize: 0 };
 
   // --- Tranco (allowlist gate input) ---
-  let tranco;
+  // The wide set (top-1M) feeds only the corroboration rule; the allowlist gate
+  // itself stays top-trancoTopN.
+  const wideTopN = Math.max(opts.wideTopN || WIDE_TOP_N, trancoTopN);
+  let wideTranco;
   if (offlineDir) {
     const csv = fs.readFileSync(path.join(offlineDir, 'tranco.csv'), 'utf8');
-    tranco = parseTrancoCsv(csv, trancoTopN);
+    wideTranco = parseTrancoCsv(csv, wideTopN);
   } else {
-    tranco = await fetchTrancoTop(trancoTopN);
+    wideTranco = await fetchTrancoTop(wideTopN);
   }
+  const tranco = topSlice(wideTranco, trancoTopN);
+  const exclusions = opts.exclusions || loadExclusions();
 
   // --- FETCH + NORMALIZE each enabled blocklist source ---
   const enabledSources = sources.filter((s) => s.enabled !== false);
@@ -294,6 +300,15 @@ async function runBuild(opts = {}) {
   stats.popularDropped = popularDropped.length;
   if (popularDropped.length > 25) console.warn(`[build] WARNING: tripwire dropped ${popularDropped.length} popular hosts (> 25): upstream or the gate may be broken`);
   if (popularDropped.length) console.warn(`[build] tripwire: dropped ${popularDropped.length} popular host(s): ${popularDropped.slice(0, 20).join(', ')}`);
+  // Explicit false-positive exclusions (data/exclusions.txt), exact host.
+  const excluded = dropExcluded([...scored.keys()], exclusions).dropped;
+  for (const h of excluded) scored.delete(h);
+  stats.excludedDropped = excluded.length;
+  // Wide-band corroboration (fix/feed-legit-exclusions): drop single-source
+  // Phishing.Database entries that sit in the Tranco top-1M.
+  const uncorroborated = dropUncorroborated(scored, wideTranco);
+  stats.uncorroboratedDropped = uncorroborated.length;
+  if (uncorroborated.length) console.warn(`[build] corroboration: dropped ${uncorroborated.length} single-source top-1M host(s): ${uncorroborated.slice(0, 20).join(', ')}`);
   let blockCount = 0;
   let warnCount = 0;
   for (const entry of scored.values()) {
@@ -345,6 +360,7 @@ async function runBuild(opts = {}) {
   // doi.org, bench 2026-09-06) — a Bloom-positive "new site" hit on a site
   // that's actually in the top-100k must never be possible.
   for (const h of nrdHostSet) if (isAllowed(h, allowlist)) nrdHostSet.delete(h);
+  for (const h of dropExcluded([...nrdHostSet], exclusions).dropped) nrdHostSet.delete(h);
   const nrdBuilt = buildBloom(nrdHostSet, { p: NRD_TARGET_P });
   const nrdBloomBuf = serializeBloomFile(nrdBuilt);
   const sha256Nrd = crypto.createHash('sha256').update(nrdBloomBuf).digest('hex');
