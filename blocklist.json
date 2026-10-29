@@ -1,5 +1,5 @@
 {
- "version": 20754,
+ "version": 20755,
  "rules": [
   "||ethereum-mixer.io^",
   "||kryptomixer.io^",
@@ -193,7 +193,6 @@
   "||foodforjoy.in^",
   "||free-5464113.webadorsite.com^",
   "||free-5479882.webadorsite.com^",
-  "||free-5547865.webadorsite.com^",
   "||free-5555167.webadorsite.com^",
   "||free-nfts5.vercel.app^",
   "||funnydoggifts.com^",
@@ -1427,7 +1426,6 @@
   "||baunachrichten.at^",
   "||bavaria-rechtundberatung.com^",
   "||bawsaq.net^",
-  "||bazecoin-extnsn.framer.ai^",
   "||bazlogistics.com^",
   "||bazowin781.pro^",
   "||bbest-pt.web.app^",
@@ -2534,6 +2532,7 @@
   "||cowswap-dapp.pages.dev^",
   "||cp24.pl^",
   "||cpazimbabwe.co.zw^",
+  "||cpisafety.che.buet.ac.bd^",
   "||cpm-mza.com.ar^",
   "||cpmailnote00.boxmode.io^",
   "||crackaf-bubbles-frontend.vercel.app^",
@@ -3702,6 +3701,7 @@
   "||free-5502058.webadorsite.com^",
   "||free-5505069.webadorsite.com^",
   "||free-5512703.webadorsite.com^",
+  "||free-5547865.webadorsite.com^",
   "||free-cryptoairdrop.com^",
   "||freeclaude.dev^",
   "||freenft-getmimts.vercel.app^",
@@ -4955,7 +4955,6 @@
   "||lkw-mieten-wien.at^",
   "||llidofi.top^",
   "||lloydschuhesale.de^",
-  "||load-hermes--y6xj4f95.dev.autobricksai.run^",
   "||lockcoin.net^",
   "||locmyparcel.com^",
   "||lodischuhedeutschland.com^",
@@ -5000,6 +4999,7 @@
   "||loveylvioa.com^",
   "||lowaoutletsdeutschland.de^",
   "||lowaschuhefabrikverkauf.de^",
-  "||lowhikingboots.com^"
+  "||lowhikingboots.com^",
+  "||loxologyshop.com^"
  ]
 }
