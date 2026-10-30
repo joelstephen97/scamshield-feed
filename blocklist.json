@@ -1,5 +1,5 @@
 {
- "version": 20755,
+ "version": 20756,
  "rules": [
   "||ethereum-mixer.io^",
   "||kryptomixer.io^",
@@ -723,7 +723,6 @@
   "||aegtecnoservice.it^",
   "||aerodrome-allocations.xyz^",
   "||aerodrome-dapp-router-v48.netlify.app^",
-  "||aerodromeapp.finance^",
   "||aerodromegroup.com^",
   "||aerostake.app^",
   "||aeroupgrade.net^",
@@ -848,7 +847,6 @@
   "||allegro-task.shop^",
   "||allegro.102988g8g8g.pl^",
   "||allegro.pl-ogloszenie9783245612.click^",
-  "||allegrolokalnie.lokalna-ofeta2356446.shop^",
   "||allegrolokalnie.pl-ogloszenie9347235437.click^",
   "||allegroseafoodgrill.com^",
   "||allegroyuxuan.com^",
@@ -2328,7 +2326,6 @@
   "||club-gagnant.online^",
   "||club.evergreenfin.ltd^",
   "||clusterprotocol.info^",
-  "||cm-annulation-operation.com^",
   "||cma.or.ke^",
   "||cn-imtoken.me^",
   "||cnbiochemicals.com^",
@@ -3612,7 +3609,6 @@
   "||fixingprompt.pages.dev^",
   "||fixmywallet.xyz^",
   "||fixprotocolchain.com^",
-  "||fixsmartsolution-app.pages.dev^",
   "||fixsyncdapps.xyz^",
   "||fixvalidatorrefix.co^",
   "||fixverify.com^",
@@ -4473,7 +4469,6 @@
   "||junpukai-google.com^",
   "||jup-agf.world^",
   "||jup-airdrop.onspace.build^",
-  "||jup-drop.vercel.app^",
   "||jup-rewards.vercel.app^",
   "||jupewin.com^",
   "||jupi.pages.dev^",
@@ -4658,7 +4653,6 @@
   "||kunde-comnetdirect.com^",
   "||kuroro-xyz.pages.dev^",
   "||kurz-link.de^",
-  "||kuucoianlogin.webflow.io^",
   "||kuucoin-l0gie7.godaddysites.com^",
   "||kyberswap.net^",
   "||kyc.digitalmps.app^",
@@ -5000,6 +4994,12 @@
   "||luckiestmint14.vercel.app^",
   "||luckiestmint15.vercel.app^",
   "||luckiestmint16.vercel.app^",
-  "||luckiestmint17.vercel.app^"
+  "||luckiestmint17.vercel.app^",
+  "||luckiestmint18.vercel.app^",
+  "||luckiestmint19.vercel.app^",
+  "||luckiestmint2.vercel.app^",
+  "||luckiestmint20.vercel.app^",
+  "||luckiestmint3.vercel.app^",
+  "||luckiestmint4.vercel.app^"
  ]
 }
