@@ -1,5 +1,5 @@
 {
- "version": 20765,
+ "version": 20766,
  "rules": [
   "||ethereum-mixer.io^",
   "||kryptomixer.io^",
@@ -22,7 +22,6 @@
   "||owa.sarbacame.com^",
   "||pamcakeswap-dashhord.com^",
   "||pancakeswap.games^",
-  "||qr.de^",
   "||rabby.at^",
   "||raydium-io.to^",
   "||reputationrescue.info^",
@@ -432,6 +431,7 @@
   "||pub-d114e251b7144281afc2db6dd267b3df.r2.dev^",
   "||pulse-bridge.com^",
   "||qnpuz.top^",
+  "||qr.de^",
   "||qr.fm^",
   "||rabinhoodloginy.github.io^",
   "||rarible1official.com^",
@@ -577,7 +577,6 @@
   "||123-13p.pages.dev^",
   "||123-bti.pages.dev^",
   "||13355.vip^",
-  "||135461223.site^",
   "||140bae.senes.at^",
   "||142192.com^",
   "||15052233.com^",
@@ -695,7 +694,6 @@
   "||913789161621147280198065376576ipjpsvqgzrmxyey.adelon.com.br^",
   "||928527-google.com^",
   "||93257.my^",
-  "||97ee1.ralind.at^",
   "||99088.weebly.com^",
   "||993005-coinbase.com^",
   "||9bet999.com^",
@@ -2776,7 +2774,6 @@
   "||dashboard.mdr.tbtheunion.com^",
   "||dashboardconnect.pages.dev^",
   "||dashing-alpaca-666f8c.netlify.app^",
-  "||date-vote.live^",
   "||datempire.com^",
   "||daveamor.us^",
   "||davescetlem.firebaseapp.com^",
@@ -3137,6 +3134,7 @@
   "||easying-f7b8c.web.app^",
   "||easying-f8b8c.web.app^",
   "||easylivingfinds.pages.dev^",
+  "||ebaymclaren-austin.eventshouse.app^",
   "||ecardalert.com^",
   "||ecdwallet.com^",
   "||ecert.am^",
@@ -4725,7 +4723,6 @@
   "||leadingvotingscore-bns.netlify.app^",
   "||leapwalley.io^",
   "||lear-trezorsuite.vercel.app^",
-  "||learn-bridge-trezor-sso-autth.typedream.app^",
   "||learn-en-suittrezor.pages.dev^",
   "||learn-start-trzer.framer.ai^",
   "||learnwithportals.com^",
@@ -4976,7 +4973,6 @@
   "||loginauth.org^",
   "||logininfo.in^",
   "||loginprodxattnetcommogingate.weebly.com^",
-  "||logix-robnhood.square.site^",
   "||logmedo.com^",
   "||logx-net.work^",
   "||loliamolipluggtris.web.app^",
@@ -5000,6 +4996,10 @@
   "||lotz-container.com^",
   "||loveaeen.com^",
   "||lovefransk.click^",
-  "||lovely-claim.netlify.app^"
+  "||lovely-claim.netlify.app^",
+  "||lovely-claim.vercel.app^",
+  "||lovethefleamarket.com^",
+  "||loveylvioa.com^",
+  "||lowaoutletsdeutschland.de^"
  ]
 }
