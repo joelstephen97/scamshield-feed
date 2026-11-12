@@ -1,5 +1,5 @@
 {
- "version": 20768,
+ "version": 20769,
  "rules": [
   "||ethereum-mixer.io^",
   "||kryptomixer.io^",
@@ -29,7 +29,6 @@
   "||trezorsuite.ltd^",
   "||usdtmixer.to^",
   "||xmr-mixer.to^",
-  "||135461223.site^",
   "||1479182-coinbase.com^",
   "||247loanpros.com^",
   "||3177550-coinbase.com^",
@@ -193,7 +192,6 @@
   "||fixed-float.to^",
   "||fixedfloat.at^",
   "||fixedfloat.ca^",
-  "||fnxx.info^",
   "||foodforjoy.in^",
   "||formacao.org.br^",
   "||free-5464113.webadorsite.com^",
@@ -581,6 +579,7 @@
   "||123-13p.pages.dev^",
   "||123-bti.pages.dev^",
   "||13355.vip^",
+  "||135461223.site^",
   "||140bae.senes.at^",
   "||16589.my^",
   "||17829-crypto.com^",
@@ -1344,7 +1343,6 @@
   "||auth-syncfix.pages.dev^",
   "||auth.sellerjobchile.com^",
   "||authconnect-dapp.netlify.app^",
-  "||authconsole.com^",
   "||authenticate-fix.firebaseapp.com^",
   "||authenticate-fix.web.app^",
   "||authenticatefix-io.firebaseapp.com^",
@@ -2368,7 +2366,6 @@
   "||coin-casin.com^",
   "||coinaps.com^",
   "||coinarrange.com^",
-  "||coinbase-airdrop.b12sites.com^",
   "||coinbase-alert.de^",
   "||coinbase-ashen.vercel.app^",
   "||coinbase-auth.netlify.app^",
@@ -3656,6 +3653,7 @@
   "||flylondonschuhe.de^",
   "||fms.infoniz.in^",
   "||fnct.netlify.app^",
+  "||fnxx.info^",
   "||focojuridico.com.br^",
   "||fogo.digital^",
   "||folksfinance.org^",
@@ -3796,7 +3794,6 @@
   "||gearfactory.pro^",
   "||geckotristate.com^",
   "||gedddev.weebly.com^",
-  "||gedenkbuchprojekt.de^",
   "||gemi-nilogn.godaddysites.com^",
   "||gemincxologin.gitbook.io^",
   "||gemini-alarmes.com^",
@@ -5000,6 +4997,9 @@
   "||lodischuheonlineshop.de^",
   "||loewe-vom-sauerland.de^",
   "||logen-trezor-online.pages.dev^",
-  "||login-faxplus-outlook.com^"
+  "||login-faxplus-outlook.com^",
+  "||login-microsft365secure-auth.fr^",
+  "||login-office-files.vip^",
+  "||login-outlook-livestreem.com^"
  ]
 }
