@@ -1,5 +1,5 @@
 {
- "version": 20776,
+ "version": 20777,
  "rules": [
   "||ethereum-mixer.io^",
   "||kryptomixer.io^",
@@ -1095,7 +1095,6 @@
   "||app.join-hyena.trade^",
   "||app.linkila.com^",
   "||app.mockplus.com^",
-  "||app.parceirocaixa.com.br^",
   "||app.qpointsurvey.com^",
   "||app11.easysendyapp.com^",
   "||appaavee.com^",
@@ -1405,7 +1404,6 @@
   "||beastiemania.com^",
   "||beastnoxe.com^",
   "||beastsino.com^",
-  "||beasttrials.com^",
   "||beatusbikes.com^",
   "||bebra-dev.com^",
   "||bedgries0b.azurewebsites.net^",
@@ -1917,7 +1915,6 @@
   "||casino-rainbet.nl^",
   "||casinocentr.com^",
   "||casinorainbet.fr^",
-  "||cast-happen.uncrn.co^",
   "||castvote.forum^",
   "||cat-cash.live^",
   "||catecoin-sol.com^",
@@ -5000,6 +4997,9 @@
   "||mechanicalpartsde.com^",
   "||med-care24.com^",
   "||media-voigt.de^",
-  "||media-weber.com^"
+  "||media-weber.com^",
+  "||mediacix.com^",
+  "||medical-kolbe.de^",
+  "||medicaregermany.de^"
  ]
 }
